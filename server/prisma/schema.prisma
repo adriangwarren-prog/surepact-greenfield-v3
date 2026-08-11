@@ -1,0 +1,389 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// GrantLifecycleStatus values:
+// - 'POTENTIAL' (Ingested via URL, un-evaluated)
+// - 'RISK_ASSESSMENT' (Undergoing pre-award evaluation)
+// - 'APPLICATION_STAGED' (Approved to apply, draft in progress)
+// - 'SUBMITTED' (Sent to funder, awaiting decision)
+// - 'AWARDED' (Approved! Triggers Post-Award initialization)
+// - 'REJECTED' (Application unsuccessful)
+// - 'CLOSED' (Project complete and fully acquitted)
+
+model Grant {
+  id                 String                @id @default(uuid())
+  organizationId     String
+  title              String
+  funderName         String
+  sourceUrl          String?               @unique
+  totalFundingValue  Float?
+  openDate           DateTime?
+  closeDate          DateTime?
+  status             String                @default("POTENTIAL")
+  category           String?
+  description        String?
+  rawScrapedData     String?               // JSON string
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  riskAssessment     RiskAssessment?
+  contracts          Contract[]
+  projectMappings    GrantProjectMapping[]
+  transactions       Transaction[]
+  documents          Document[]
+  tasks              MilestoneTask[]
+  requirementResponses GrantRequirementResponse[]
+
+  dateSubmitted       DateTime?
+  submissionReference String?
+  gfaDocumentName     String?
+  gfaExtractedTitle   String?
+  closeoutNotes       String?
+  amountRequested     Float?
+
+  guidelinesDocName       String?
+  guidelinesExtractedTitle String?
+  guidelinesResponseDocs  String? // comma-separated response docs
+  requiredDocuments       String? // JSON string of extracted required attachments
+  costItems               String? // JSON string of cost items
+  businessUnitId          String?
+  businessUnit            BusinessUnit?         @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+
+  @@map("grants")
+}
+
+model RiskAssessment {
+  id                       String   @id @default(uuid())
+  grantId                  String   @unique
+  grant                    Grant    @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  assessedByUserId         String
+  financialRiskScore       Int
+  deliveryCapabilityScore  Int
+  strategicAlignmentScore  Int
+  overallRiskRating        String   // 'LOW', 'MEDIUM', 'HIGH'
+  justificationNotes       String?
+  isApprovedToApply        Boolean  @default(false)
+  createdAt                DateTime @default(now())
+
+  @@map("risk_assessments")
+}
+
+model Contract {
+  id                         String              @id @default(uuid())
+  grantId                    String
+  grant                      Grant               @relation(fields: [grantId], references: [id], onDelete: Restrict)
+  fundingAgreementReference  String?
+  executionDate              DateTime?
+  totalObligatedAmount       Float
+  coContribution             Float?              @default(0)
+  createdAt                  DateTime            @default(now())
+  milestones                 Milestone[]
+  variations                 ContractVariation[]
+  installments               Installment[]
+
+  @@map("contracts")
+}
+
+model Milestone {
+  id          String          @id @default(uuid())
+  contractId  String
+  contract    Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime
+  isAcquitted Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  tasks       MilestoneTask[]
+  projectId   String?
+  project     Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@map("milestones")
+}
+
+model User {
+  id            String             @id @default(uuid())
+  name          String
+  email         String             @unique
+  department    String
+  role          String             @default("staff")
+  status        String             @default("Active")
+  createdAt     DateTime           @default(now())
+  tasks         MilestoneTask[]
+  businessUnits BusinessUnitUser[]
+
+  @@map("users")
+}
+
+model Project {
+  id             String                @id @default(uuid())
+  organizationId String                @default("demo-org-1")
+  name           String
+  description    String?
+  department     String
+  status         String                @default("POTENTIAL") // POTENTIAL, PENDING, IN_PROGRESS, CLOSED
+  createdAt      DateTime              @default(now())
+  grantMappings  GrantProjectMapping[]
+  transactions   Transaction[]
+  milestones     Milestone[]
+  tasks          MilestoneTask[]
+  budgetAmount   Float                 @default(0)
+  businessUnitId String?
+  businessUnit   BusinessUnit?         @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+
+  @@map("projects")
+}
+
+model GrantProjectMapping {
+  id              String   @id @default(uuid())
+  grantId         String
+  grant           Grant    @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  allocatedAmount Float
+  createdAt       DateTime @default(now())
+
+  @@map("grant_project_mappings")
+}
+
+model MilestoneTask {
+  id               String     @id @default(uuid())
+  organizationId   String     @default("demo-org-1")
+  milestoneId      String?
+  milestone        Milestone? @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  grantId          String?
+  grant            Grant?     @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  projectId        String?
+  project          Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title            String
+  description      String?
+  assignedToUserId String
+  assignedToUser   User       @relation(fields: [assignedToUserId], references: [id], onDelete: Restrict)
+  dueDate          DateTime
+  status           String     @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  stage            String     @default("OBLIGATION") // APPLICATION, OBLIGATION
+  completedAt      DateTime?
+  createdAt        DateTime   @default(now())
+
+  @@map("milestone_tasks")
+}
+
+model Installment {
+  id          String   @id @default(uuid())
+  contractId  String
+  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  amount      Float
+  dueDate     DateTime
+  status      String   @default("PENDING") // PENDING, RECEIVED
+  createdAt   DateTime @default(now())
+
+  @@map("installments")
+}
+
+model ContractVariation {
+  id             String    @id @default(uuid())
+  contractId     String
+  contract       Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  referenceNumber String
+  requestDate    DateTime  @default(now())
+  approvalDate   DateTime?
+  valueChange    Float     // positive or negative
+  newCloseDate   DateTime?
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  description    String?
+  createdAt      DateTime  @default(now())
+
+  @@map("contract_variations")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  organizationId String @default("demo-org-1")
+  grantId     String?
+  grant       Grant?   @relation(fields: [grantId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  amount      Float    // Positive for income, Negative for expenditure
+  type        String   // INCOME, EXPENDITURE
+  description String
+  category    String   // Equipment, Labor, Infrastructure, Funder Drawdown, etc.
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@map("transactions")
+}
+
+model Document {
+  id          String   @id @default(uuid())
+  organizationId String @default("demo-org-1")
+  grantId     String
+  grant       Grant    @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  name        String
+  type        String   // e.g., AGREEMENT, REPORT, APPLICATION, OTHER
+  fileSize    String
+  uploadedBy  String
+  content     String?
+  createdAt   DateTime @default(now())
+
+  @@map("documents")
+}
+
+model SavedSearch {
+  id          String   @id @default(uuid())
+  organizationId String @default("demo-org-1")
+  name        String
+  category    String?
+  minFunding  Float?
+  maxFunding  Float?
+  source      String?
+  createdAt   DateTime @default(now())
+
+  @@map("saved_searches")
+}
+
+model KnowledgeDocument {
+  id          String   @id @default(uuid())
+  organizationId String @default("demo-org-1")
+  name        String
+  type        String   // ANNUAL_REPORT, STRATEGIC_PLAN, PROJECT_PLAN, OTHER
+  fileSize    String
+  uploadedBy  String
+  content     String?
+  createdAt   DateTime @default(now())
+
+  @@map("knowledge_documents")
+}
+
+model FundingBody {
+  id             String                @id @default(uuid())
+  organizationId String                @default("demo-org-1")
+  name           String
+  type           String                // GOVERNMENT, CORPORATE, PHILANTHROPIC
+  website        String?
+  description    String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  contacts       FundingBodyContact[]
+  opportunities  FundingOpportunity[]
+
+  @@map("funding_bodies")
+}
+
+model FundingBodyContact {
+  id             String                @id @default(uuid())
+  fundingBodyId  String
+  fundingBody    FundingBody           @relation(fields: [fundingBodyId], references: [id], onDelete: Cascade)
+  name           String
+  role           String?
+  email          String?
+  phone          String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  interactions   ContactInteraction[]
+  opportunities  FundingOpportunity[]
+
+  @@map("funding_body_contacts")
+}
+
+model ContactInteraction {
+  id             String                @id @default(uuid())
+  contactId      String
+  contact        FundingBodyContact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type           String                // EMAIL, CALL, MEETING, NOTE, TASK
+  subject        String
+  content        String
+  status         String?               // PENDING, COMPLETED
+  dueDate        DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@map("contact_interactions")
+}
+
+model FundingOpportunity {
+  id             String                @id @default(uuid())
+  fundingBodyId  String
+  fundingBody    FundingBody           @relation(fields: [fundingBodyId], references: [id], onDelete: Cascade)
+  contactId      String?
+  contact        FundingBodyContact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  title          String
+  value          Float?
+  status         String                @default("IDENTIFIED") // IDENTIFIED, DISCUSSING, APPLYING, PROMOTED, ABANDONED
+  description    String?
+  deadline       DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@map("funding_opportunities")
+}
+
+model Department {
+  id            String         @id @default(uuid())
+  name          String
+  description   String?
+  createdAt     DateTime       @default(now())
+  businessUnits BusinessUnit[]
+
+  @@map("departments")
+}
+
+model BusinessUnit {
+  id            String             @id @default(uuid())
+  name          String
+  description   String?
+  departmentId  String
+  department    Department         @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  users         BusinessUnitUser[]
+  grants        Grant[]
+  projects      Project[]
+  createdAt     DateTime           @default(now())
+
+  @@map("business_units")
+}
+
+model BusinessUnitUser {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessUnitId String
+  businessUnit   BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, businessUnitId])
+  @@map("business_unit_users")
+}
+
+model GrantRequirementResponse {
+  id             String   @id @default(uuid())
+  grantId        String
+  grant          Grant    @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  requirementKey String   // e.g. "Q1", "Q2"
+  question       String   // The extracted requirement question
+  responseText   String   // The AI generated or user edited response
+  status         String   @default("DRAFT") // DRAFT, IN_PROGRESS, APPROVED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([grantId, requirementKey])
+  @@map("grant_requirement_responses")
+}
+
+model Organization {
+  id              String   @id @default(uuid())
+  name            String
+  pricingTier     String   @default("FREE_TRIAL") // 'FREE_TRIAL', 'STARTER', 'ENTERPRISE'
+  sector          String   @default("LOCAL_GOVERNMENT") // 'LOCAL_GOVERNMENT', 'ACCHO', 'INFRASTRUCTURE', 'RENEWABLE_ENERGY'
+  state           String   @default("QLD")
+  trialEndsAt     DateTime
+  maxGrantsQuota  Int      @default(5)
+  maxUsersQuota   Int      @default(3)
+  aiTokenQuota    Int      @default(10)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("organizations")
+}

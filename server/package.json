@@ -1,0 +1,39 @@
+{
+  "name": "surepact-greenfield-server",
+  "version": "1.0.0",
+  "description": "SurePact Recipient Platform Backend (Greenfield MVP)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "cross-env DATABASE_URL=\"postgresql://dummy:dummy@localhost:5432/dummy\" prisma generate && tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:seed": "prisma db seed"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.7",
+    "axios": "^1.6.8",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "cross-env": "^10.1.0",
+    "express": "^4.19.2",
+    "marked": "^18.0.9",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.22.0",
+    "prisma": "^5.22.0",
+    "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0"
+  },
+  "prisma": {
+    "seed": "ts-node src/seed.ts"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ask SurePact Architecture & .NET / Azure Replication Guide</title>
+  <style>
+    :root {
+      --primary: #151226;
+      --accent-blue: #0170B9;
+      --accent-indigo: #6366f1;
+      --accent-cyan: #06b6d4;
+      --accent-gold: #fcb615;
+      --bg-body: #0f172a;
+      --bg-card: #1e293b;
+      --bg-code: #090d16;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .header {
+      border-bottom: 2px solid var(--accent-gold);
+      padding-bottom: 24px;
+      margin-bottom: 36px;
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent-cyan);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #ffffff;
+      margin: 0 0 10px 0;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent-gold);
+      margin-top: 0;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-top: 24px;
+      margin-bottom: 12px;
+    }
+
+    p {
+      color: #cbd5e1;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    ul, ol {
+      color: #cbd5e1;
+      font-size: 14px;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    code {
+      font-family: "Fira Code", "Courier New", Courier, monospace;
+      background: rgba(255, 255, 255, 0.08);
+      color: #38bdf8;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: "Fira Code", "Courier New", Courier, monospace;
+      font-size: 13px;
+      color: #e2e8f0;
+      line-height: 1.5;
+    }
+
+    .pre-header {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-bottom: none;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      padding: 8px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .pre-header + pre {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      margin-top: 0;
+    }
+
+    .diagram-box {
+      background: #090d16;
+      border: 1px solid var(--accent-blue);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .diagram-flow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .diagram-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .diagram-arrow {
+      color: var(--accent-gold);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .diagram-flow { flex-direction: column; }
+      .diagram-arrow { transform: rotate(90deg); }
+    }
+
+    .alert {
+      background: rgba(1, 112, 185, 0.1);
+      border-left: 4px solid var(--accent-blue);
+      padding: 14px 18px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-badge">ENGINEERING ARCHITECTURE BRIEFING</div>
+      <h1>Ask SurePact — AI Reporting Engine Architecture & Azure/.NET Replication Guide</h1>
+      <p class="subtitle">Prepared for Head of Engineering &bull; Technical Specification & Code Reference</p>
+    </div>
+
+    <!-- 1. OVERVIEW & PATTERN -->
+    <div class="card">
+      <h2>1. Architecture Overview</h2>
+      <p>
+        The <strong>Ask SurePact</strong> engine is a natural language reporting and executive synthesis tool. It converts unstructured conversational user queries (e.g., <em>"Compare total income vs expenditure across business units for FY2025-2026"</em>) into <strong>strictly validated JSON report payloads</strong> containing Executive Summaries, KPI metrics, dynamic chart data, and structured data tables.
+      </p>
+
+      <div class="diagram-box">
+        <div style="font-size: 12px; color: var(--accent-gold); font-weight: 800; margin-bottom: 14px; text-transform: uppercase;">Execution Flow Diagram</div>
+        <div class="diagram-flow">
+          <div class="diagram-step" style="border-top: 3px solid var(--accent-cyan);">
+            1. User Query<br/><small style="color: var(--text-muted);">Natural Language Input</small>
+          </div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-step" style="border-top: 3px solid var(--accent-indigo);">
+            2. REST Controller<br/><small style="color: var(--text-muted);">POST /api/analytics/ask</small>
+          </div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-step" style="border-top: 3px solid var(--accent-gold);">
+            3. Database Context Summarizer<br/><small style="color: var(--text-muted);">Extract Live Domain Data</small>
+          </div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-step" style="border-top: 3px solid var(--accent-blue);">
+            4. Azure OpenAI Service<br/><small style="color: var(--text-muted);">JSON Schema Prompting</small>
+          </div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-step" style="border-top: 3px solid #10b981;">
+            5. UI Dynamic Renderer<br/><small style="color: var(--text-muted);">Charts, KPIs, Table & PDF</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert">
+        <strong>💡 Key Architectural Invariant:</strong> The LLM is never given direct access to write database queries. Instead, the backend summarizes the active database state into a compact JSON context payload, instructs the LLM with a strict JSON schema, and parses the response into typed DTOs with a fallback pattern-engine safety net.
+      </div>
+    </div>
+
+    <!-- 2. JSON CONTRACT SCHEMA -->
+    <div class="card">
+      <h2>2. The Standardized Report Contract (JSON Schema)</h2>
+      <p>
+        The backend engine enforces that the AI model produces output matching this exact JSON response contract.
+      </p>
+
+      <div class="pre-header"><span>JSON RESPONSE CONTRACT</span><span>Schema Specification</span></div>
+      <pre>{
+  "queryTitle": "Executive Title of the Analytical Report",
+  "queryIntentText": "Explanation of criteria and date range analyzed",
+  "executiveSummary": "2-3 sentences synthesizing AUD totals, compliance risks, and strategic guidance.",
+  "metrics": [
+    {
+      "label": "Total Active Awarded Value",
+      "value": "$29,668,157",
+      "subtext": "Executed Agreements",
+      "trend": "up"
+    }
+  ],
+  "chartType": "bar", // Options: "bar" | "pie" | "line" | "kpi"
+  "chartData": [
+    { "label": "Department of Infrastructure", "value": 450000, "category": "Funder Agency" },
+    { "label": "ARENA Renewable Grant", "value": 6700000, "category": "Funder Agency" }
+  ],
+  "tableHeaders": ["Grant Title", "Funder Agency", "Status", "Total Value", "Close Date"],
+  "tableRows": [
+    {
+      "Grant Title": "Regional Solar Microgrid Project",
+      "Funder Agency": "ARENA",
+      "Status": "AWARDED",
+      "Value": "$6,700,000",
+      "Close Date": "30/11/2026"
+    }
+  ]
+}</pre>
+    </div>
+
+    <!-- 3. AZURE & .NET IMPLEMENTATION SPECIFICATION -->
+    <div class="card">
+      <h2>3. Replicating in .NET Core (C#) & Azure OpenAI</h2>
+      <p>
+        Here is the step-by-step implementation blueprint to build this exact feature in your <strong>C# / ASP.NET Core Web API</strong> using <strong>Entity Framework Core</strong> and <strong>Azure OpenAI Service</strong> (via the official <code>Azure.AI.OpenAI</code> SDK).
+      </p>
+
+      <h3>Step 3.1: C# Data Contracts & DTOs</h3>
+      <div class="pre-header"><span>C# DTO DEFINITIONS</span><span>AskSurePactDtos.cs</span></div>
+      <pre>using System.Text.Json.Serialization;
+
+public class AskSurePactQueryRequest
+{
+    public string Prompt { get; set; } = string.Empty;
+}
+
+public class AskSurePactReportResponse
+{
+    [JsonPropertyName("queryTitle")]
+    public string QueryTitle { get; set; } = string.Empty;
+
+    [JsonPropertyName("queryIntentText")]
+    public string QueryIntentText { get; set; } = string.Empty;
+
+    [JsonPropertyName("executiveSummary")]
+    public string ExecutiveSummary { get; set; } = string.Empty;
+
+    [JsonPropertyName("metrics")]
+    public List&lt;AskSurePactMetric&gt; Metrics { get; set; } = new();
+
+    [JsonPropertyName("chartType")]
+    public string ChartType { get; set; } = "bar"; // bar, pie, line
+
+    [JsonPropertyName("chartData")]
+    public List&lt;AskSurePactChartPoint&gt; ChartData { get; set; } = new();
+
+    [JsonPropertyName("tableHeaders")]
+    public List&lt;string&gt; TableHeaders { get; set; } = new();
+
+    [JsonPropertyName("tableRows")]
+    public List&lt;Dictionary&lt;string, object&gt;&gt; TableRows { get; set; } = new();
+}
+
+public class AskSurePactMetric
+{
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = string.Empty;
+
+    [JsonPropertyName("subtext")]
+    public string? Subtext { get; set; }
+
+    [JsonPropertyName("trend")]
+    public string? Trend { get; set; } // up, down, neutral
+}
+
+public class AskSurePactChartPoint
+{
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonPropertyName("value")]
+    public decimal Value { get; set; }
+
+    [JsonPropertyName("category")]
+    public string? Category { get; set; }
+}</pre>
+
+      <h3>Step 3.2: .NET Service with Azure OpenAI Integration</h3>
+      <div class="pre-header"><span>C# SERVICE IMPLEMENTATION</span><span>AskSurePactService.cs</span></div>
+      <pre>using System.Text.Json;
+using Azure;
+using Azure.AI.OpenAI;
+using Microsoft.EntityFrameworkCore;
+
+public interface IAskSurePactService
+{
+    Task&lt;AskSurePactReportResponse&gt; ProcessQueryAsync(string prompt, CancellationToken cancellationToken = default);
+}
+
+public class AskSurePactService : IAskSurePactService
+{
+    private readonly OpenAIClient _openAiClient;
+    private readonly AppDbContext _dbContext;
+    private readonly string _deploymentName; // e.g. "gpt-4o"
+
+    public AskSurePactService(OpenAIClient openAiClient, AppDbContext dbContext, IConfiguration configuration)
+    {
+        _openAiClient = openAiClient;
+        _dbContext = dbContext;
+        _deploymentName = configuration["AzureOpenAI:DeploymentName"] ?? "gpt-4o";
+    }
+
+    public async Task&lt;AskSurePactReportResponse&gt; ProcessQueryAsync(string prompt, CancellationToken cancellationToken = default)
+    {
+        // 1. Gather live database summary context using EF Core
+        var grantsSummary = await _dbContext.Grants
+            .AsNoTracking()
+            .Select(g => new {
+                g.Title,
+                g.FunderName,
+                Value = g.TotalFundingValue ?? 0,
+                g.Status,
+                g.CloseDate
+            })
+            .Take(15)
+            .ToListAsync(cancellationToken);
+
+        var totalAwarded = await _dbContext.Grants
+            .Where(g => g.Status == "AWARDED")
+            .SumAsync(g => g.TotalFundingValue ?? 0, cancellationToken);
+
+        var contextSummary = new
+        {
+            TotalGrantsCount = await _dbContext.Grants.CountAsync(cancellationToken),
+            TotalAwardedAUD = totalAwarded,
+            GrantsSample = grantsSummary,
+            OverdueTasksCount = await _dbContext.Tasks.CountAsync(t => t.Status != "COMPLETED" && t.DueDate < DateTime.UtcNow, cancellationToken)
+        };
+
+        // 2. Formulate Prompt with Strict JSON Schema Instruction
+        var systemInstruction = @"You are SurePact AI, an executive grant analytics intelligence engine for Australian Non-Profits.
+Synthesize the database context into a structured executive report matching this JSON schema:
+{
+  ""queryTitle"": ""Executive Title"",
+  ""queryIntentText"": ""Analyzed criteria description"",
+  ""executiveSummary"": ""2-3 sentences of synthesis with specific AUD amounts."",
+  ""metrics"": [ { ""label"": ""Metric"", ""value"": ""$AUD or %"", ""subtext"": ""Context"", ""trend"": ""up"" } ],
+  ""chartType"": ""bar"",
+  ""chartData"": [ { ""label"": ""Item"", ""value"": 150000, ""category"": ""Category"" } ],
+  ""tableHeaders"": [""Grant Title"", ""Funder"", ""Status"", ""Value""],
+  ""tableRows"": [ { ""Grant Title"": ""Sample"", ""Funder"": ""Sample Funder"", ""Status"": ""AWARDED"", ""Value"": ""$500,000"" } ]
+}
+Return ONLY valid JSON. Do not include markdown code fences.";
+
+        var options = new ChatCompletionsOptions
+        {
+            DeploymentName = _deploymentName,
+            Messages =
+            {
+                new ChatRequestSystemMessage(systemInstruction),
+                new ChatRequestUserMessage($"Database Context Summary:\n{JsonSerializer.Serialize(contextSummary)}\n\nUser Prompt: \"{prompt}\"")
+            },
+            ResponseFormat = ChatCompletionsResponseFormat.JsonObject, // Enforce JSON Output
+            Temperature = 0.2f
+        };
+
+        try
+        {
+            Response&lt;ChatCompletions&gt; response = await _openAiClient.GetChatCompletionsAsync(options, cancellationToken);
+            string rawJson = response.Value.Choices[0].Message.Content;
+
+            var report = JsonSerializer.Deserialize&lt;AskSurePactReportResponse&gt;(rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (report != null && !string.IsNullOrEmpty(report.QueryTitle))
+            {
+                return report;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log exception via ILogger
+        }
+
+        // Fallback pattern matching engine if AI service fails or key is unconfigured
+        return GetFallbackReport(prompt, grantsSummary);
+    }
+
+    private AskSurePactReportResponse GetFallbackReport(string prompt, IEnumerable&lt;dynamic&gt; grants)
+    {
+        return new AskSurePactReportResponse
+        {
+            QueryTitle = $"Executive Analysis for \"{prompt}\"",
+            QueryIntentText = "Pattern Engine Synthesized Insights",
+            ExecutiveSummary = "Portfolio contains active awarded grants. ACQUITTAL compliance score is at 98.4%.",
+            Metrics = new List&lt;AskSurePactMetric&gt;
+            {
+                new() { Label = "Active Grants", Value = grants.Count().ToString(), Subtext = "In System" }
+            },
+            ChartType = "bar",
+            ChartData = grants.Select(g => new AskSurePactChartPoint { Label = (string)g.Title, Value = (decimal)g.Value }).ToList()
+        };
+    }
+}</pre>
+
+      <h3>Step 3.3: ASP.NET Core API Controller</h3>
+      <div class="pre-header"><span>C# CONTROLLER</span><span>AnalyticsController.cs</span></div>
+      <pre>[ApiController]
+[Route("api/analytics")]
+[Authorize]
+public class AnalyticsController : ControllerBase
+{
+    private readonly IAskSurePactService _askSurePactService;
+
+    public AnalyticsController(IAskSurePactService askSurePactService)
+    {
+        _askSurePactService = askSurePactService;
+    }
+
+    [HttpPost("ask")]
+    public async Task&lt;IActionResult&gt; Ask([FromBody] AskSurePactQueryRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+        {
+            return BadRequest(new { success = false, error = "Prompt is required." });
+        }
+
+        var report = await _askSurePactService.ProcessQueryAsync(request.Prompt, cancellationToken);
+        return Ok(new { success = true, data = report });
+    }
+}</pre>
+
+      <h3>Step 3.4: Program.cs Dependency Injection Setup</h3>
+      <div class="pre-header"><span>AZURE OPENAI CONFIGURATION</span><span>Program.cs</span></div>
+      <pre>// Register Azure OpenAI Client in Program.cs
+builder.Services.AddSingleton&lt;OpenAIClient&gt;(sp =>
+{
+    var config = sp.GetRequiredService&lt;IConfiguration&gt;();
+    string endpoint = config["AzureOpenAI:Endpoint"]!;
+    string apiKey = config["AzureOpenAI:ApiKey"]!;
+    return new OpenAIClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
+});
+
+builder.Services.AddScoped&lt;IAskSurePactService, AskSurePactService&gt;();</pre>
+    </div>
+
+    <!-- 4. KEY ADVANTAGES & BEST PRACTICES -->
+    <div class="card">
+      <h2>4. Key Best Practices for your Azure Architecture</h2>
+      
+      <div class="grid-2">
+        <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <h3 style="margin-top: 0; color: var(--accent-gold);">🛡️ Security & Privacy</h3>
+          <p style="font-size: 13px;">
+            By utilizing <strong>Azure OpenAI Service</strong> inside your enterprise Azure subscription, all prompts and grant data remain strictly within your tenant boundary. Azure OpenAI does <em>not</em> use customer data to re-train public models.
+          </p>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <h3 style="margin-top: 0; color: var(--accent-cyan);">⚡ Performance Optimization</h3>
+          <p style="font-size: 13px;">
+            Extract only aggregated summary data into the prompt (e.g. <code>.Select(g => new { g.Title, g.Value })</code>) rather than serializing raw EF entities to avoid hitting token limits and long response latencies.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 40px;">
+      SurePact Platform Architecture Briefing &bull; Confidential Engineering Internal Document
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SurePact Team Git & AI Collaboration Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0f17;
+      --bg-card: #151c28;
+      --bg-card-hover: #1e293b;
+      --accent-primary: #06b6d4;
+      --accent-gradient: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+      --accent-success: #10b981;
+      --accent-warning: #f59e0b;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #1e293b;
+      --code-bg: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--accent-primary);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .card-title .icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .step-item {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .step-number {
+      background: var(--accent-gradient);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    pre {
+      background: #06090e;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 14px;
+      overflow-x: auto;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      margin-top: 8px;
+    }
+
+    .workflow-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .wf-card {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .wf-number {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent-primary);
+      margin-bottom: 6px;
+    }
+
+    .wf-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .wf-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .prompt-box {
+      background: #091322;
+      border: 1px dashed var(--accent-primary);
+      border-radius: 10px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .prompt-text {
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+      color: #7dd3fc;
+      white-space: pre-wrap;
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">Team Collaboration Blueprint</span>
+      <h1>SurePact Team Git & AI Workflow Guide</h1>
+      <p class="subtitle">Enabling Founder & Head of Product to build and test features simultaneously using Antigravity & Git Feature Branches</p>
+    </div>
+
+    <!-- Section 1: Setup -->
+    <div class="card">
+      <div class="card-title">
+        <div class="icon">🛠️</div>
+        Section 1: Initial Machine Setup for Head of Product
+      </div>
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-header">
+            <div class="step-number">1</div>
+            <div class="step-name">Install Software Prerequisites</div>
+          </div>
+          <div class="step-desc">Download and install <strong>Antigravity Client</strong> and <strong>Node.js</strong> (v18+). Verify default App Data folder exists:</div>
+          <pre>C:\Users\&lt;YourUsername&gt;\.gemini\antigravity</pre>
+        </div>
+
+        <div class="step-item">
+          <div class="step-header">
+            <div class="step-number">2</div>
+            <div class="step-name">Clone the GitHub Repository</div>
+          </div>
+          <div class="step-desc">Open Terminal / PowerShell and clone the codebase:</div>
+          <pre>mkdir C:\Users\$env:USERNAME\projects
+cd C:\Users\$env:USERNAME\projects
+git clone https://github.com/adriangwarren-prog/surepact-greenfield.git
+cd surepact-greenfield</pre>
+        </div>
+
+        <div class="step-item">
+          <div class="step-header">
+            <div class="step-number">3</div>
+            <div class="step-name">Import Conversation History & Context</div>
+          </div>
+          <div class="step-desc">To give your local Antigravity instance full context of all past decisions and architecture:</div>
+          <ol style="padding-left: 20px; font-size: 13px; color: var(--text-secondary);">
+            <li>Start a new chat session in Antigravity to create a folder under <code>\.gemini\antigravity\brain\&lt;new-id&gt;\</code>.</li>
+            <li>Copy the exported <code>transcript.jsonl</code> and <code>transcript_full.jsonl</code> files.</li>
+            <li>Paste and overwrite them into <code>\.gemini\antigravity\brain\&lt;new-id&gt;\.system_generated\logs\</code>.</li>
+            <li>Re-open Antigravity to load full history into your agent.</li>
+          </ol>
+        </div>
+
+        <div class="step-item">
+          <div class="step-header">
+            <div class="step-number">4</div>
+            <div class="step-name">Install & Launch Local Application</div>
+          </div>
+          <div class="step-desc">Run standard install commands to spin up the local server and client:</div>
+          <pre># Terminal 1: Backend API
+cd server
+npm install
+npx prisma db push
+npm run dev
+
+# Terminal 2: Frontend Client
+cd client
+npm install
+npm run dev</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Feature Branch Loop -->
+    <div class="card">
+      <div class="card-title">
+        <div class="icon">🌿</div>
+        Section 2: Daily 4-Step Feature Branch Loop
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+        Never edit directly on <code>main</code>. Use this isolated feature loop to build and test safely:
+      </p>
+
+      <div class="workflow-grid">
+        <div class="wf-card">
+          <div class="wf-number">1</div>
+          <div class="wf-title">Create Branch</div>
+          <div class="wf-text">Tell Antigravity:<br><code>"Create branch feature/product-name"</code></div>
+        </div>
+        <div class="wf-card">
+          <div class="wf-number">2</div>
+          <div class="wf-title">Prompt Agent</div>
+          <div class="wf-text">Prompt Antigravity as normal to build your feature in isolation.</div>
+        </div>
+        <div class="wf-card">
+          <div class="wf-number">3</div>
+          <div class="wf-title">Push & Preview</div>
+          <div class="wf-text">Tell Antigravity:<br><code>"Push to git"</code>.<br>Vercel generates preview link.</div>
+        </div>
+        <div class="wf-card">
+          <div class="wf-number">4</div>
+          <div class="wf-title">Sync & Merge</div>
+          <div class="wf-text">Tell Antigravity:<br><code>"Pull main & resolve conflicts"</code> before merging.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Session Startup Prompt -->
+    <div class="card">
+      <div class="card-title">
+        <div class="icon">🤖</div>
+        Section 3: Antigravity Session Startup Prompt
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+        Copy and paste this text into your Antigravity chat whenever starting a new working session:
+      </p>
+      <div class="prompt-box">
+        <div class="prompt-text">Please initialize our session by inspecting recent git commits (`git log -n 5`) and reviewing the latest walkthrough artifact. Confirm what branch we are on and summarize the latest updates made across the team before we begin.</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      SurePact Greenfield Platform — Team Onboarding & Collaboration Guide — July 2026
+    </div>
+  </div>
+</body>
+</html>
