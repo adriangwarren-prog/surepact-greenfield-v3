@@ -71,7 +71,7 @@ app.use(async (req: any, res: any, next: any) => {
       email: 'adrian.warren@surepact.com',
       name: 'Adrian Warren',
       role: 'SUPER_ADMIN',
-      organizationId: (req.headers['x-tenant-id'] as string) || 'demo-org-1'
+      organizationId: 'demo-org-1'
     };
     return next();
   }
@@ -393,7 +393,7 @@ const getTenantId = (req: any): string => {
   if (req.user && req.user.organizationId) {
     return req.user.organizationId;
   }
-  return (req.headers['x-tenant-id'] as string) || 'demo-org-1';
+  return 'demo-org-1';
 };
 
 const getTenantFilter = (req: any) => {
