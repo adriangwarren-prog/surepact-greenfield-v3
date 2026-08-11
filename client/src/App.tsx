@@ -10982,7 +10982,7 @@ function App() {
         }}>
           <div className="panel-card" style={{ width: '100%', maxWidth: '500px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '30px', animation: 'fadeIn 0.25s ease-out' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fff' }}>Add New User</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fff' }}>Provision New Colleague</h3>
               <button onClick={() => setShowAddUserModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
@@ -10999,18 +10999,19 @@ function App() {
                 <input type="email" placeholder="e.g. christine.m@surepact.com" className="url-input" style={{ width: '100%' }} value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Role</label>
-                  <select className="url-input" style={{ width: '100%' }} value={newUserRole} onChange={(e) => setNewUserRole(e.target.value as any)} required>
+                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Role / Privileges</label>
+                  <select className="url-input" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }} value={newUserRole} onChange={(e) => setNewUserRole(e.target.value as any)} required>
                     <option value="staff">Staff / Standard User</option>
                     <option value="admin">Administrator (Global Access)</option>
                   </select>
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Department Scope</label>
-                  <select className="url-input" style={{ width: '100%' }} value={newUserDept} onChange={(e) => setNewUserDept(e.target.value)} required>
+                  <select className="url-input" style={{ width: '100%', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }} value={newUserDept} onChange={(e) => setNewUserDept(e.target.value)}>
                     <option value="">-- Global / No Specific Dept --</option>
+                    <option value="Executive">Executive & Management</option>
                     <option value="Engineering & Infrastructure">Engineering & Infrastructure</option>
                     <option value="Community & Recreation">Community & Recreation</option>
                     <option value="Environment & Water">Environment & Water</option>
@@ -11020,11 +11021,17 @@ function App() {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Business Unit Membership (Access List)</label>
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', backgroundColor: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '150px', overflowY: 'auto' }}>
+                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Initial Login Password</label>
+                <input type="text" placeholder="SurePact2026!" className="url-input" style={{ width: '100%', fontFamily: 'monospace', fontWeight: '600' }} defaultValue="SurePact2026!" readOnly />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>Initial access password set to default <strong>SurePact2026!</strong> for immediate login.</span>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Business Unit Membership (Access Scope)</label>
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', backgroundColor: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '140px', overflowY: 'auto' }}>
                   {departments.map(dept => (
                     <div key={dept.id}>
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{dept.name}</span>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: '#fbbd08', textTransform: 'uppercase' }}>{dept.name}</span>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px', paddingLeft: '8px' }}>
                         {dept.businessUnits?.map(bu => (
                           <label key={bu.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -11046,13 +11053,13 @@ function App() {
                     </div>
                   ))}
                 </div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>Users with Admin roles always retain global view/edit access regardless of unit memberships.</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>Users with Admin roles retain global view/edit access regardless of unit memberships.</span>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddUserModal(false)} style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
                 <button type="submit" className="btn btn-success" disabled={savingUser} style={{ flex: 1, justifyContent: 'center' }}>
-                  {savingUser ? 'Adding...' : 'Create User'}
+                  {savingUser ? 'Provisioning...' : 'Provision Colleague'}
                 </button>
               </div>
             </form>
