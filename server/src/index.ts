@@ -390,6 +390,9 @@ const grantInclude = {
 };
 
 const getTenantId = (req: any): string => {
+  if (req.user && req.user.organizationId) {
+    return req.user.organizationId;
+  }
   return (req.headers['x-tenant-id'] as string) || 'demo-org-1';
 };
 
@@ -2988,8 +2991,8 @@ app.post('/api/transactions', async (req, res) => {
   }
 });
 
-// 6. GET /api/audit-ledger - Return all system audit events from DB
-app.get('/api/audit-ledger', async (req: any, res) => {
+// 6. GET /api/audit-ledger & GET /api/audit-log - Return all system audit events from DB
+app.get(['/api/audit-ledger', '/api/audit-log'], async (req: any, res) => {
   try {
     const orgId = req.user?.organizationId || 'demo-org-1';
     const logs = await db.auditLog.findMany({
@@ -4420,6 +4423,11 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`SurePact Greenfield API Server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`SurePact Greenfield API Server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
+export { app };

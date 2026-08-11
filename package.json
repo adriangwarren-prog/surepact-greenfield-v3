@@ -1,5 +1,25 @@
 {
+  "name": "surepact-greenfield-v3",
+  "version": "3.0.0",
   "dependencies": {
-    "marked": "^18.0.9"
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.6.8",
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "marked": "^18.0.9",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.22.0",
+    "prisma": "^5.22.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
   }
 }
