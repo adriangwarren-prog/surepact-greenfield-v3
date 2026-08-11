@@ -106,15 +106,17 @@ model Milestone {
 }
 
 model User {
-  id            String             @id @default(uuid())
-  name          String
-  email         String             @unique
-  department    String
-  role          String             @default("staff")
-  status        String             @default("Active")
-  createdAt     DateTime           @default(now())
-  tasks         MilestoneTask[]
-  businessUnits BusinessUnitUser[]
+  id             String             @id @default(uuid())
+  organizationId String             @default("demo-org-1")
+  name           String
+  email          String             @unique
+  passwordHash   String?
+  department     String
+  role           String             @default("staff")
+  status         String             @default("Active")
+  createdAt      DateTime           @default(now())
+  tasks          MilestoneTask[]
+  businessUnits  BusinessUnitUser[]
 
   @@map("users")
 }
@@ -386,4 +388,18 @@ model Organization {
   updatedAt       DateTime @updatedAt
 
   @@map("organizations")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String   @default("demo-org-1")
+  userId         String?
+  userName       String?
+  action         String
+  resourceType   String
+  resourceId     String?
+  details        String?
+  timestamp      DateTime @default(now())
+
+  @@map("audit_logs")
 }
