@@ -40,3 +40,6 @@ render_url.txt
 conversation_logs
 transcript*.jsonl
 .env
+
+.vercel
+.env*
