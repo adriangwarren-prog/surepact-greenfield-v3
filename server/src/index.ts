@@ -2992,7 +2992,7 @@ app.post('/api/transactions', async (req, res) => {
 });
 
 // 6. GET /api/audit-ledger & GET /api/audit-log - Return all system audit events from DB
-app.get(['/api/audit-ledger', '/api/audit-log'], async (req: any, res) => {
+const getAuditLogsHandler = async (req: any, res: any) => {
   try {
     const orgId = req.user?.organizationId || 'demo-org-1';
     const logs = await db.auditLog.findMany({
@@ -3026,7 +3026,10 @@ app.get(['/api/audit-ledger', '/api/audit-log'], async (req: any, res) => {
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
-});
+};
+
+app.get('/api/audit-ledger', getAuditLogsHandler);
+app.get('/api/audit-log', getAuditLogsHandler);
 
 // 6b. POST /api/audit-ledger - Create manual audit event in DB
 app.post('/api/audit-ledger', async (req: any, res) => {
