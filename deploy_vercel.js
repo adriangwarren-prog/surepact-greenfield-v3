@@ -24,6 +24,7 @@ if (!fs.existsSync(vercelOutputDir)) {
 const configJson = {
   version: 3,
   routes: [
+    { src: '/api/(.*)', dest: `${renderUrl}/api/$1` },
     { handle: 'filesystem' },
     { src: '/(.*)', dest: '/index.html' }
   ]
