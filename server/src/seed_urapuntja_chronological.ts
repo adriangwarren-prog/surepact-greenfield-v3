@@ -32,39 +32,38 @@ export async function seedChronologicalUrapuntjaDemoForOrg(ORG_ID = 'demo-org-1'
   const buFleet = await db.businessUnit.create({ data: { name: 'Mobile Clinic Fleet & Logistics', departmentId: deptInfra.id } });
   const buGrants = await db.businessUnit.create({ data: { name: 'Grants & Acquittals Compliance', departmentId: deptFinance.id } });
 
-  // 4. Seed Staff Users (Adrian Warren as Grants Manager)
-
-  const getOrCreateUser = async (data: any) => {
-    const existing = await db.user.findUnique({ where: { email: data.email } });
+  const getOrCreateUser = async (userData: any) => {
+    const existing = await db.user.findUnique({ where: { email: userData.email } });
     if (existing) return existing;
-    return await getOrCreateUser({ data });
+    return await db.user.create({ data: userData });
   };
 
   console.log('👥 Seeding Staff & Grants Managers...');
   const defaultPassHash = await bcrypt.hash('SurePact2026!', 10);
   const uAdrian = await getOrCreateUser({
-    data: { name: 'Adrian Warren', email: 'adrian.warren@surepact.com', department: 'Finance & Grant Compliance', role: 'admin', status: 'Active', passwordHash: defaultPassHash }
+    name: 'Adrian Warren', email: 'adrian.warren@surepact.com', department: 'Finance & Grant Compliance', role: 'admin', status: 'Active', passwordHash: defaultPassHash
   });
   const uMelissa = await getOrCreateUser({
-    data: { name: 'Melissa Hinson', email: 'melissa.hinson@urapuntja.org.au', department: 'Executive & Governance', role: 'admin', status: 'Active', passwordHash: defaultPassHash }
+    name: 'Melissa Hinson', email: 'melissa.hinson@urapuntja.org.au', department: 'Executive & Governance', role: 'admin', status: 'Active', passwordHash: defaultPassHash
   });
   const uBoyle = await getOrCreateUser({
-    data: { name: 'Dr. David Boyle', email: 'david.boyle@urapuntja.org.au', department: 'Health & Clinical Services', role: 'staff', status: 'Active', passwordHash: defaultPassHash }
+    name: 'Dr. David Boyle', email: 'david.boyle@urapuntja.org.au', department: 'Health & Clinical Services', role: 'staff', status: 'Active', passwordHash: defaultPassHash
   });
   const uJenkins = await getOrCreateUser({
-    data: { name: 'Sarah Jenkins', email: 'sarah.jenkins@urapuntja.org.au', department: 'Health & Clinical Services', role: 'staff', status: 'Active', passwordHash: defaultPassHash }
+    name: 'Sarah Jenkins', email: 'sarah.jenkins@urapuntja.org.au', department: 'Health & Clinical Services', role: 'staff', status: 'Active', passwordHash: defaultPassHash
   });
   const uDeluis = await getOrCreateUser({
-    data: { name: 'Marcus Deluis', email: 'marcus.deluis@urapuntja.org.au', department: 'Homelands & Infrastructure', role: 'staff', status: 'Active', passwordHash: defaultPassHash }
+    name: 'Marcus Deluis', email: 'marcus.deluis@urapuntja.org.au', department: 'Homelands & Infrastructure', role: 'staff', status: 'Active', passwordHash: defaultPassHash
   });
   const uChristine = await getOrCreateUser({
-    data: { name: 'Christine Malinao', email: 'christine.malinao@urapuntja.org.au', department: 'Finance & Grant Compliance', role: 'staff', status: 'Active', passwordHash: defaultPassHash }
+    name: 'Christine Malinao', email: 'christine.malinao@urapuntja.org.au', department: 'Finance & Grant Compliance', role: 'staff', status: 'Active', passwordHash: defaultPassHash
   });
   const uNicole = await getOrCreateUser({
-    data: { name: 'Nicole Sherwin', email: 'nicole.sherwin@urapuntja.org.au', department: 'Finance & Grant Compliance', role: 'staff', status: 'Active', passwordHash: defaultPassHash }
+    name: 'Nicole Sherwin', email: 'nicole.sherwin@urapuntja.org.au', department: 'Finance & Grant Compliance', role: 'staff', status: 'Active', passwordHash: defaultPassHash
   });
 
   await db.businessUnitUser.createMany({
+    skipDuplicates: true,
     data: [
       { userId: uAdrian.id, businessUnitId: buGrants.id },
       { userId: uAdrian.id, businessUnitId: buCEO.id },
