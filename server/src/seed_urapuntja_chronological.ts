@@ -6,7 +6,7 @@ import * as bcrypt from 'bcryptjs';
 
 export async function seedChronologicalUrapuntjaDemo() {
   console.log('================================================================');
-  console.log('🚀 Starting Deep Chronological Multi-Tenant Seeding...');
+  console.log('🚀 Starting Deep Chronological Single Primary Tenancy Seeding...');
   console.log('================================================================');
 
   // 1. Ensure PDF assets exist on disk
@@ -39,7 +39,16 @@ export async function seedChronologicalUrapuntjaDemo() {
 
   console.log('✅ Database completely purged cleanly.');
 
-  // 3. Seed Org Structure (Departments & Business Units ONCE)
+  // 3. Seed Primary Organization Record
+  try {
+    await db.organization.upsert({
+      where: { id: 'demo-org-1' },
+      update: { name: 'Urapuntja Health Service Aboriginal Corporation', sector: 'ACCHO', state: 'NT', pricingTier: 'ENTERPRISE' },
+      create: { id: 'demo-org-1', name: 'Urapuntja Health Service Aboriginal Corporation', sector: 'ACCHO', state: 'NT', pricingTier: 'ENTERPRISE', trialEndsAt: new Date(Date.now() + 365*24*60*60*1000) }
+    });
+  } catch (e) {}
+
+  // 4. Seed Org Structure (Departments & Business Units ONCE)
   console.log('🏢 Seeding Urapuntja Health Service Org Structure...');
   const deptExec = await db.department.create({ data: { name: 'Executive & Governance', description: 'Board of Directors & Office of the CEO' } });
   const deptClinical = await db.department.create({ data: { name: 'Health & Clinical Services', description: 'Primary health clinics, mobile outreach, maternal & child health' } });
@@ -53,12 +62,13 @@ export async function seedChronologicalUrapuntjaDemo() {
   const buFleet = await db.businessUnit.create({ data: { name: 'Mobile Clinic Fleet & Logistics', departmentId: deptInfra.id } });
   const buGrants = await db.businessUnit.create({ data: { name: 'Grants & Acquittals Compliance', departmentId: deptFinance.id } });
 
-  // 4. Seed Staff Users ONCE
+  // 5. Seed Staff Users ONCE
   console.log('👥 Seeding Staff & Grants Managers...');
   const defaultPassHash = await bcrypt.hash('SurePact2026!', 10);
 
   const getOrCreateUser = async (raw: any) => {
     const data = raw?.data || raw;
+    data.organizationId = 'demo-org-1';
     const existing = await db.user.findFirst({ where: { email: data.email } });
     if (existing) {
       return await db.user.update({ where: { id: existing.id }, data });
@@ -99,7 +109,7 @@ export async function seedChronologicalUrapuntjaDemo() {
     } catch (e) {}
   }
 
-  // 5. Seed Funding Bodies ONCE
+  // 6. Seed Funding Bodies ONCE
   console.log('🏛️ Seeding Funding Bodies...');
   await db.fundingBody.create({ data: { name: 'Department of Health and Aged Care (DoHAC)', type: 'GOVERNMENT', website: 'https://www.health.gov.au' } });
   await db.fundingBody.create({ data: { name: 'NT Department of Health (NT Health)', type: 'GOVERNMENT', website: 'https://health.nt.gov.au' } });
@@ -157,12 +167,12 @@ export async function seedChronologicalUrapuntjaDemo() {
     }
   };
 
-  const TARGET_ORGS = ['demo-org-1', 'demo-org-2', 'demo-org-3', 'demo-org-4'];
+  const TARGET_ORGS = ['demo-org-1'];
 
   for (const ORG_ID of TARGET_ORGS) {
-    console.log(`📦 Seeding tenancy ${ORG_ID}...`);
+    console.log(`📦 Seeding primary tenancy ${ORG_ID} (Urapuntja Health Service Aboriginal Corporation)...`);
 
-    // 6. Knowledge Base Documents
+    // 7. Knowledge Base Documents
     const kbFiles = [
       { name: 'UHSAC_Corporate_Profile_2025.pdf', type: 'STRATEGIC_PLAN', size: '2.4 MB' },
       { name: 'UHSAC_Strategic_Plan_2024_2029.pdf', type: 'STRATEGIC_PLAN', size: '3.1 MB' },
@@ -189,7 +199,7 @@ export async function seedChronologicalUrapuntjaDemo() {
       } catch (e) {}
     }
 
-    // 7. Seed 12 Projects per tenancy
+    // 8. Seed 12 Projects per tenancy
     const pClinicOps = await db.project.create({ data: { organizationId: ORG_ID, name: 'Soapy Bore Central Primary Clinic Operations 2024-2026', description: 'Core primary care, pharmacy dispensing, emergency triage, and telehealth services.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1850000 } });
     const pMobileVans = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Mobile 4WD Clinic Van Expansion', description: 'Procurement and weekly clinical operations of 4WD mobile health vans across 16 homelands.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 615000 } });
     const pBirthing = await db.project.create({ data: { organizationId: ORG_ID, name: 'Birthing on Country Maternal & Child Health Initiative', description: 'Culturally safe maternal care, local midwifery training, and antenatal/postnatal visits.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1720000 } });
@@ -203,7 +213,7 @@ export async function seedChronologicalUrapuntjaDemo() {
     const pFloodResilience = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Emergency Flood Resilience & Power Grid', description: 'Emergency food stores, satellite backup power, and flood relief access pathways.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 750000 } });
     const pAOD = await db.project.create({ data: { organizationId: ORG_ID, name: 'Alcohol & Other Drugs Prevention & Outreach Service', description: 'Community counseling, harm reduction education, and social emotional well-being support.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 520000 } });
 
-    // 8. CATEGORY A: 10 CLOSED GRANTS
+    // 9. CATEGORY A: 10 CLOSED GRANTS
     const closedGrantsData = [
       { title: 'DoHAC Primary Health Care Support Grant 2022-24', funder: 'Department of Health and Aged Care (DoHAC)', value: 1250000, open: '2022-01-15', close: '2024-06-30', submitted: '2022-03-10', projects: [{ project: pClinicOps, amount: 850000 }, { project: pMobileVans, amount: 400000 }] },
       { title: 'NT Health Remote Vehicle Fleet Upgrade 2023', funder: 'NT Department of Health (NT Health)', value: 180000, open: '2023-02-01', close: '2024-03-31', submitted: '2023-03-15', projects: [{ project: pMobileVans, amount: 180000 }] },
@@ -257,7 +267,7 @@ export async function seedChronologicalUrapuntjaDemo() {
       }
     }
 
-    // 9. CATEGORY B: 15 LIVE GRANTS
+    // 10. CATEGORY B: 15 LIVE GRANTS
     const liveGrantsData = [
       { title: 'DoHAC National Aboriginal & Torres Strait Islander Health Plan 2024-26', funder: 'Department of Health and Aged Care (DoHAC)', value: 2400000, open: '2024-01-01', close: '2026-12-31', submitted: '2024-02-15', projects: [{ project: pClinicOps, amount: 1600000 }, { project: pMobileVans, amount: 800000 }] },
       { title: 'NT Health Core Remote Primary Health Care Agreement 2024-27', funder: 'NT Department of Health (NT Health)', value: 3100000, open: '2024-03-01', close: '2027-02-28', submitted: '2024-04-10', projects: [{ project: pClinicOps, amount: 3100000 }] },
@@ -345,7 +355,7 @@ export async function seedChronologicalUrapuntjaDemo() {
       }
     }
 
-    // 10. CATEGORY C: 4 REJECTED GRANTS
+    // 11. CATEGORY C: 4 REJECTED GRANTS
     const rejectedGrantsData = [
       { title: 'ARC Special Research Initiative for Remote Indigenous Health', funder: 'Australian Research Council (ARC)', value: 920000, open: '2023-05-01', close: '2023-08-31', submitted: '2023-08-15' },
       { title: 'Paul Ramsay Foundation Place-Based Remote Innovation Grant', funder: 'Paul Ramsay Foundation', value: 1150000, open: '2024-02-01', close: '2024-05-31', submitted: '2024-05-10' },
@@ -383,7 +393,7 @@ export async function seedChronologicalUrapuntjaDemo() {
       }
     }
 
-    // 11. CATEGORY D: 6 PENDING GRANTS
+    // 12. CATEGORY D: 6 PENDING GRANTS
     const pendingGrantsData = [
       { title: 'NHMRC Partnership Projects 2026 Round 1', funder: 'NHMRC Australia', value: 1500000, status: 'SUBMITTED', open: '2025-05-01', close: '2025-09-30', submitted: '2025-08-01' },
       { title: 'MRFF Frontier Health & Medical Research 2026', funder: 'Medical Research Future Fund (MRFF)', value: 3000000, status: 'APPLICATION_STAGED', open: '2025-06-01', close: '2025-11-30' },
@@ -424,7 +434,7 @@ export async function seedChronologicalUrapuntjaDemo() {
   }
 
   console.log('================================================================');
-  console.log('🎉 MULTI-TENANT DEEP SEEDING COMPLETE! All 4 Tenancies Seeded with 35 Grants Each.');
+  console.log('🎉 SINGLE PRIMARY TENANCY SEEDING COMPLETE! Primary Tenancy (demo-org-1) Seeded with 35 Urapuntja Grants.');
   console.log('================================================================');
 }
 

@@ -3999,7 +3999,7 @@ function App() {
           {/* Logo container */}
           <div style={{ textAlign: 'center', marginBottom: '4px' }}>
             <img 
-              src="https://surepact.com/wp-content/uploads/2024/02/0224_Surepact_Logo-Reversed.svg" 
+              src="https://surepact.com/wp-content/uploads/2024/02/0224_Surepact_Logo.svg" 
               alt="SurePact Logo" 
               style={{ width: '150px', height: 'auto', display: 'block', margin: '0 auto 8px' }} 
             />
