@@ -291,21 +291,15 @@ app.get('/api/dev/db-seed', async (req, res) => {
   }
 
   try {
-    const { execSync } = require('child_process');
-    const path = require('path');
-    console.log('[Dev Seed] Running prisma db push...');
-    const prismaPath = path.join(__dirname, '../node_modules/prisma/build/index.js');
-    execSync(`node "${prismaPath}" db push --accept-data-loss`, { stdio: 'inherit' });
-    
     const { seedDatabase } = require('./seed');
-    console.log('[Dev Seed] Seeding database...');
+    console.log('[Dev Seed] Seeding multi-tenant Urapuntja database...');
     await seedDatabase();
     
     console.log('[Dev Seed] Seeding complete!');
     res.json({ success: true, message: 'Database successfully migrated and seeded with test data.' });
   } catch (error: any) {
     console.error('[Dev Seed] Seeding failed:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message, stack: error.stack });
   }
 });
 
