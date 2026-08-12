@@ -59,14 +59,14 @@ import { CalendarHub } from './components/CalendarHub';
 import { OnboardingHelpCenter } from './components/OnboardingHelpCenter';
 import { getFunderAnalytics } from './services/askSurepactService';
 
-// Intercept all fetch calls to automatically inject platform password if saved in localStorage
+// Intercept all fetch calls to automatically inject platform JWT token or password if saved in localStorage
 const originalFetch = window.fetch;
 window.fetch = async (input, init) => {
-  const password = localStorage.getItem('platform_password') || '';
+  const token = localStorage.getItem('surepact_jwt_token') || localStorage.getItem('platform_password') || '';
   const newInit = { ...init };
   const headers = { ...newInit.headers } as Record<string, string>;
-  if (password && !headers['Authorization'] && !headers['authorization']) {
-    headers['Authorization'] = `Bearer ${password}`;
+  if (token && !headers['Authorization'] && !headers['authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
   headers['bypass-tunnel-reminder'] = 'true';
   newInit.headers = headers;
@@ -416,6 +416,7 @@ function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [loginEmail, setLoginEmail] = useState('adrian.warren@surepact.com');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const lastSelectedGrantIdRef = useRef<string>('');
@@ -429,15 +430,16 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('platform_password');
-    if (stored) {
+    const storedToken = localStorage.getItem('surepact_jwt_token') || localStorage.getItem('platform_password');
+    if (storedToken) {
       fetch(`${API_BASE}/auth-verify`, {
-        headers: { 'Authorization': `Bearer ${stored}` }
+        headers: { 'Authorization': `Bearer ${storedToken}` }
       })
       .then(res => {
         if (res.ok) {
           setIsAuthenticated(true);
         } else if (res.status === 401) {
+          localStorage.removeItem('surepact_jwt_token');
           localStorage.removeItem('platform_password');
         } else {
           // Server/tunnel error (502, 503, 500) - keep credentials and assume authenticated to avoid lockout
@@ -3931,21 +3933,41 @@ function App() {
     );
   }
 
-  // Handle Login Portal when not authenticated
+  // Handle Login Portal when not authenticated (Multi-User & Multi-Tenant Login)
   if (!isAuthenticated) {
     const handleLoginSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoginError('');
+      const cleanEmail = (loginEmail || 'adrian.warren@surepact.com').trim().toLowerCase();
+
       try {
-        const res = await fetch(`${API_BASE}/auth-verify`, {
-          headers: { 'Authorization': `Bearer ${loginPassword}` }
+        // 1. Attempt multi-tenant email + password login
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, password: loginPassword })
         });
-        if (res.ok) {
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (data.token) {
+            localStorage.setItem('surepact_jwt_token', data.token);
+          }
           localStorage.setItem('platform_password', loginPassword);
           setIsAuthenticated(true);
-        } else {
-          setLoginError('Invalid platform password. Please try again.');
+          return;
         }
+
+        // 2. Fallback to auth-verify check if master password used directly
+        const verifyRes = await fetch(`${API_BASE}/auth-verify`, {
+          headers: { 'Authorization': `Bearer ${loginPassword}` }
+        });
+        if (verifyRes.ok) {
+          localStorage.setItem('platform_password', loginPassword);
+          setIsAuthenticated(true);
+          return;
+        }
+
+        setLoginError(data.error || 'Invalid credentials or password. Please try again.');
       } catch (err: any) {
         setLoginError(`Network error connecting to verification server: ${err.message || err}`);
       }
@@ -3969,15 +3991,15 @@ function App() {
           borderRadius: '16px',
           padding: '40px',
           width: '100%',
-          maxWidth: '420px',
+          maxWidth: '440px',
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '24px'
+          gap: '20px'
         }}>
           {/* Logo container */}
-          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '4px' }}>
             <img 
               src="https://surepact.com/wp-content/uploads/2024/02/0224_Surepact_Logo-Reversed.svg" 
               alt="SurePact Logo" 
@@ -3985,18 +4007,97 @@ function App() {
             />
             <div style={{
               fontFamily: "'Outfit', sans-serif",
-              fontSize: '14px',
-              fontWeight: '500',
+              fontSize: '13px',
+              fontWeight: '600',
               color: 'var(--accent-indigo)',
               letterSpacing: '1px'
             }}>
-              GRANT ESSENTIALS PORTAL
+              MULTI-TENANT GRANT PLATFORM LOGIN
             </div>
           </div>
 
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Quick Demo User Selector */}
+          <div style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px' }}>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+              Quick Demo Accounts
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginEmail('adrian.warren@surepact.com');
+                  setLoginPassword('SurePact2026!');
+                }}
+                style={{
+                  background: loginEmail === 'adrian.warren@surepact.com' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  color: '#fff',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>👑 Adrian Warren (Admin)</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>adrian.warren@surepact.com</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginEmail('david.boyle@surepact.com');
+                  setLoginPassword('SurePact2026!');
+                }}
+                style={{
+                  background: loginEmail === 'david.boyle@surepact.com' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  color: '#fff',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>💰 David Boyle (Finance Manager)</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>david.boyle@surepact.com</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Email Address Input */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '0.5px' }}>
-              SECURE PLATFORM PASSWORD
+              WORK EMAIL ADDRESS
+            </label>
+            <input
+              type="email"
+              className="url-input"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+              placeholder="e.g. adrian.warren@surepact.com"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Password Input */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '0.5px' }}>
+              PASSWORD
             </label>
             <input
               type="password"
@@ -4009,14 +4110,12 @@ function App() {
                 borderRadius: '8px',
                 color: '#fff',
                 fontSize: '14px',
-                outline: 'none',
-                transition: 'border-color 0.2s'
+                outline: 'none'
               }}
               placeholder="••••••••••••"
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
               required
-              autoFocus
             />
           </div>
 
@@ -4054,7 +4153,7 @@ function App() {
               gap: '8px'
             }}
           >
-            Authenticate Portal
+            Authenticate Account →
           </button>
 
           {/* Dynamic API Base Override for Dev/SSO login failure recovery */}
