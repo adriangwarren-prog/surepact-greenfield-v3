@@ -33,9 +33,15 @@ export async function seedChronologicalUrapuntjaDemoForOrg(ORG_ID = 'demo-org-1'
   const buGrants = await db.businessUnit.create({ data: { name: 'Grants & Acquittals Compliance', departmentId: deptFinance.id } });
 
   const getOrCreateUser = async (userData: any) => {
-    const existing = await db.user.findUnique({ where: { email: userData.email } });
+    const email = userData.email || userData.data?.email;
+    if (!email) {
+      console.error('getOrCreateUser received invalid userData:', userData);
+      throw new Error('getOrCreateUser requires email property');
+    }
+    const existing = await db.user.findUnique({ where: { email } });
     if (existing) return existing;
-    return await db.user.create({ data: userData });
+    const createData = userData.data ? userData.data : userData;
+    return await db.user.create({ data: createData });
   };
 
   console.log('👥 Seeding Staff & Grants Managers...');
