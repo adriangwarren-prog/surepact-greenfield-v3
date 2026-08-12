@@ -3984,15 +3984,13 @@ function App() {
         padding: '20px'
       }}>
         <form onSubmit={handleLoginSubmit} style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
+          background: '#13111c',
+          border: '1px solid #2d284d',
           borderRadius: '16px',
           padding: '40px',
           width: '100%',
           maxWidth: '440px',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -4008,8 +4006,8 @@ function App() {
             <div style={{
               fontFamily: "'Outfit', sans-serif",
               fontSize: '13px',
-              fontWeight: '600',
-              color: 'var(--accent-indigo)',
+              fontWeight: '700',
+              color: '#818cf8',
               letterSpacing: '1px'
             }}>
               MULTI-TENANT GRANT PLATFORM LOGIN
@@ -4017,8 +4015,8 @@ function App() {
           </div>
 
           {/* Quick Demo User Selector */}
-          <div style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px' }}>
-            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+          <div style={{ width: '100%', background: '#1c192e', border: '1px solid #2d284d', borderRadius: '8px', padding: '12px' }}>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
               Quick Demo Accounts
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -4029,20 +4027,21 @@ function App() {
                   setLoginPassword('SurePact2026!');
                 }}
                 style={{
-                  background: loginEmail === 'adrian.warren@surepact.com' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: loginEmail === 'adrian.warren@surepact.com' ? '#4f46e5' : '#26223d',
+                  border: loginEmail === 'adrian.warren@surepact.com' ? '1px solid #6366f1' : '1px solid #3b355c',
                   borderRadius: '6px',
-                  padding: '6px 10px',
-                  color: '#fff',
+                  padding: '8px 12px',
+                  color: '#ffffff',
                   fontSize: '11px',
+                  fontWeight: '600',
                   cursor: 'pointer',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}
               >
-                <span>👑 Adrian Warren (Admin)</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>adrian.warren@surepact.com</span>
+                <span style={{ color: '#ffffff', fontWeight: '600' }}>👑 Adrian Warren (Admin)</span>
+                <span style={{ fontSize: '10px', color: loginEmail === 'adrian.warren@surepact.com' ? '#e0e7ff' : '#a5b4fc' }}>adrian.warren@surepact.com</span>
               </button>
               <button
                 type="button"
@@ -4051,41 +4050,42 @@ function App() {
                   setLoginPassword('SurePact2026!');
                 }}
                 style={{
-                  background: loginEmail === 'david.boyle@surepact.com' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: loginEmail === 'david.boyle@surepact.com' ? '#4f46e5' : '#26223d',
+                  border: loginEmail === 'david.boyle@surepact.com' ? '1px solid #6366f1' : '1px solid #3b355c',
                   borderRadius: '6px',
-                  padding: '6px 10px',
-                  color: '#fff',
+                  padding: '8px 12px',
+                  color: '#ffffff',
                   fontSize: '11px',
+                  fontWeight: '600',
                   cursor: 'pointer',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}
               >
-                <span>💰 David Boyle (Finance Manager)</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>david.boyle@surepact.com</span>
+                <span style={{ color: '#ffffff', fontWeight: '600' }}>💰 David Boyle (Finance Manager)</span>
+                <span style={{ fontSize: '10px', color: loginEmail === 'david.boyle@surepact.com' ? '#e0e7ff' : '#a5b4fc' }}>david.boyle@surepact.com</span>
               </button>
             </div>
           </div>
 
           {/* Email Address Input */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '0.5px' }}>
+            <label style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: '700', letterSpacing: '0.5px' }}>
               WORK EMAIL ADDRESS
             </label>
             <input
               type="email"
-              className="url-input"
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: '#1c192e',
+                border: '1px solid #3b355c',
                 borderRadius: '8px',
-                color: '#fff',
+                color: '#ffffff',
                 fontSize: '14px',
-                outline: 'none'
+                outline: 'none',
+                boxSizing: 'border-box'
               }}
               placeholder="e.g. adrian.warren@surepact.com"
               value={loginEmail}
@@ -4096,21 +4096,21 @@ function App() {
 
           {/* Password Input */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '0.5px' }}>
+            <label style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: '700', letterSpacing: '0.5px' }}>
               PASSWORD
             </label>
             <input
               type="password"
-              className="url-input"
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: '#1c192e',
+                border: '1px solid #3b355c',
                 borderRadius: '8px',
-                color: '#fff',
+                color: '#ffffff',
                 fontSize: '14px',
-                outline: 'none'
+                outline: 'none',
+                boxSizing: 'border-box'
               }}
               placeholder="••••••••••••"
               value={loginPassword}
@@ -4123,11 +4123,12 @@ function App() {
             <div style={{
               width: '100%',
               padding: '10px 14px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
               borderRadius: '6px',
-              color: 'var(--color-danger)',
+              color: '#f87171',
               fontSize: '12px',
+              fontWeight: '600',
               textAlign: 'center'
             }}>
               {loginError}
@@ -4136,14 +4137,13 @@ function App() {
 
           <button
             type="submit"
-            className="btn"
             style={{
               width: '100%',
               padding: '12px',
-              background: 'var(--accent-indigo)',
-              color: '#fff',
+              background: '#4f46e5',
+              color: '#ffffff',
               fontSize: '14px',
-              fontWeight: '600',
+              fontWeight: '700',
               borderRadius: '8px',
               border: 'none',
               cursor: 'pointer',
@@ -4157,22 +4157,23 @@ function App() {
           </button>
 
           {/* Dynamic API Base Override for Dev/SSO login failure recovery */}
-          <div style={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ width: '100%', borderTop: '1px solid #2d284d', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>API Connection Endpoint</span>
+              <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>API Connection Endpoint</span>
             </div>
             <input 
               type="text" 
               placeholder={compiledApiUrl || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')} 
               style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                backgroundColor: '#1c192e',
+                border: '1px solid #2d284d',
                 borderRadius: '6px',
                 padding: '8px 12px',
                 fontSize: '11px',
-                color: '#fff',
+                color: '#e2e8f0',
                 outline: 'none',
-                width: '100%'
+                width: '100%',
+                boxSizing: 'border-box'
               }}
               defaultValue={localStorage.getItem('surepact_api_url') || ''}
               onChange={(e) => {
@@ -4184,7 +4185,7 @@ function App() {
                 }
               }}
             />
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'center' }}>Change URL and refresh the page to apply</span>
+            <span style={{ fontSize: '9px', color: '#64748b', textAlign: 'center' }}>Change URL and refresh the page to apply</span>
           </div>
         </form>
       </div>
