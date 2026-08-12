@@ -2045,6 +2045,20 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const handleExportAcquittalPDF = () => {
+    if (!acquittalTargetId) return;
+    const token = localStorage.getItem('surepact_token');
+    const pdfUrl = `/api/grants/${acquittalTargetId}/acquittal-pdf?startDate=${acquittalStartDate}&endDate=${acquittalEndDate}`;
+    
+    // Trigger direct browser download
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.setAttribute('download', `surepact_acquittal_${acquittalTargetTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
 
 
   // Reject application
@@ -8760,7 +8774,7 @@ function App() {
                         linkedMilestones.map(m => (
                           <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '14px 18px' }}>
                             <div>
-                              <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>{m.title}</div>
+                              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{m.title}</div>
                               {m.description && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{m.description}</div>}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px' }}>
@@ -8801,7 +8815,7 @@ function App() {
                                 style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                               />
                               <div>
-                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff', textDecoration: t.status === 'COMPLETED' ? 'line-through' : 'none', opacity: t.status === 'COMPLETED' ? 0.6 : 1 }}>{t.title}</div>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', textDecoration: t.status === 'COMPLETED' ? 'line-through' : 'none', opacity: t.status === 'COMPLETED' ? 0.6 : 1 }}>{t.title}</div>
                                 {t.description && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{t.description}</div>}
                                 <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
                                   Due: {new Date(t.dueDate).toLocaleDateString('en-AU')} | Assigned: {t.assignedToUser.name}
@@ -12443,6 +12457,16 @@ function App() {
                   onClick={handleExportAcquittalCSV}
                 >
                   Export to CSV
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  disabled={acquittalTransactions.length === 0}
+                  onClick={handleExportAcquittalPDF}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <FileText size={14} />
+                  Export PDF
                 </button>
               </div>
             </div>

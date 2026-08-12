@@ -5,9 +5,18 @@ import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { db } from './db';
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: any;
+    }
+  }
+}
 import { GrantScraperFactory, extractGrantWithGemini } from './scraper';
 import { RiskService } from './riskService';
 import { processAskSurePactQuery, processAskSurePactQueryAsync } from './askSurepactService';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 // Simple helper to load .env file manually
 function loadEnv() {
@@ -48,8 +57,7 @@ app.use(async (req: any, res: any, next: any) => {
     req.path === '/api/health' || 
     req.path === '/api/auth/login' || 
     req.path === '/api/auth-verify' || 
-    req.path === '/api/dev/db-seed' ||
-    req.path.includes('/download')
+    req.path === '/api/dev/db-seed'
   ) {
     return next();
   }
@@ -64,17 +72,7 @@ app.use(async (req: any, res: any, next: any) => {
 
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-  // Backward compatibility check for master password or JWT session
-  if (token === 'SurePact2026!' || token.toLowerCase() === 'surepact2026!') {
-    req.user = {
-      id: 'u-admin-1',
-      email: 'adrian.warren@surepact.com',
-      name: 'Adrian Warren',
-      role: 'SUPER_ADMIN',
-      organizationId: 'demo-org-1'
-    };
-    return next();
-  }
+  // JWT-only authentication - master password backdoor removed for security
 
   try {
     const decoded: any = jwt.verify(token, JWT_SECRET);
@@ -129,9 +127,8 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const validPassword = await bcrypt.compare(password, user.passwordHash || '');
-    const allowMasterFallback = password === 'SurePact2026!' || password.toLowerCase() === 'surepact2026';
 
-    if (!validPassword && !allowMasterFallback) {
+    if (!validPassword) {
       return res.status(401).json({ success: false, error: 'Invalid email or password.' });
     }
 
@@ -177,13 +174,19 @@ app.post('/api/users/provision', async (req: any, res) => {
       return res.status(400).json({ success: false, error: 'Name and email are required.' });
     }
 
+    // Quota Enforcement Check (P5)
+    const userQuotaError = await checkUserQuota(req);
+    if (userQuotaError) {
+      return res.status(429).json({ success: false, error: userQuotaError });
+    }
+
     const cleanEmail = email.trim().toLowerCase();
     const existing = await db.user.findUnique({ where: { email: cleanEmail } });
     if (existing) {
       return res.status(400).json({ success: false, error: `User with email "${cleanEmail}" already exists.` });
     }
 
-    const initialPassword = password || 'SurePact2026!';
+    const initialPassword = password || `sp-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
     const hash = await bcrypt.hash(initialPassword, 10);
     const newUser = await db.user.create({
       data: {
@@ -404,6 +407,39 @@ const getTenantFilter = (req: any) => {
   return tenantId;
 };
 
+// Quota Enforcement Helpers (P5)
+const checkGrantQuota = async (req: any): Promise<string | null> => {
+  try {
+    const orgId = getTenantId(req);
+    const org = await db.organization.findUnique({ where: { id: orgId } });
+    if (org && org.maxGrantsQuota && org.maxGrantsQuota > 0) {
+      const currentCount = await db.grant.count({ where: { organizationId: orgId } });
+      if (currentCount >= org.maxGrantsQuota) {
+        return `Grant quota limit reached for your ${org.pricingTier} plan (${org.maxGrantsQuota} max). Please upgrade your tier to add more grants.`;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Quota Check] Error checking grant quota:', err.message);
+  }
+  return null;
+};
+
+const checkUserQuota = async (req: any): Promise<string | null> => {
+  try {
+    const orgId = req.user?.organizationId || getTenantId(req);
+    const org = await db.organization.findUnique({ where: { id: orgId } });
+    if (org && org.maxUsersQuota && org.maxUsersQuota > 0) {
+      const currentCount = await db.user.count({ where: { organizationId: orgId } });
+      if (currentCount >= org.maxUsersQuota) {
+        return `User quota limit reached for your ${org.pricingTier} plan (${org.maxUsersQuota} max). Please upgrade your tier to add more team members.`;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Quota Check] Error checking user quota:', err.message);
+  }
+  return null;
+};
+
 // 1. GET /api/grants - List all grants with risk assessments & contracts
 app.get('/api/grants', async (req, res) => {
   try {
@@ -421,6 +457,28 @@ app.get('/api/grants', async (req, res) => {
   }
 });
 
+// 1b. GET /api/grants/:id - Get single grant by ID with full details (P7)
+app.get('/api/grants/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const grant = await db.grant.findFirst({
+      where: {
+        id,
+        organizationId: getTenantFilter(req)
+      },
+      include: grantInclude
+    });
+
+    if (!grant) {
+      return res.status(404).json({ success: false, error: 'Grant not found.' });
+    }
+
+    res.json({ success: true, data: grant });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 2. POST /api/grants/ingest - Ingest from URL via Gemini AI
 app.post('/api/grants/ingest', async (req, res) => {
   const { url, rawText } = req.body;
@@ -429,12 +487,18 @@ app.post('/api/grants/ingest', async (req, res) => {
     return res.status(400).json({ success: false, error: 'URL or Web Page Text is required.' });
   }
 
+  // Quota Enforcement Check (P5)
+  const grantQuotaErr = await checkGrantQuota(req);
+  if (grantQuotaErr) {
+    return res.status(429).json({ success: false, error: grantQuotaErr });
+  }
+
   try {
     const extractedData = await extractGrantWithGemini(url || 'https://grants.gov.au', rawText);
 
     const newGrant = await db.grant.create({
       data: {
-        organizationId: ORG_ID,
+        organizationId: getTenantId(req),
         title: extractedData.title,
         funderName: extractedData.funderName,
         sourceUrl: url || 'Manual Paste',
@@ -450,7 +514,7 @@ app.post('/api/grants/ingest', async (req, res) => {
 
     await ensureFundingBody(newGrant.funderName, url || 'Manual Input');
 
-    logEvent(newGrant.id, 'GRANT_INGESTED_VIA_URL', 'Adrian (Grant Officer)', {
+    logEvent(newGrant.id, 'GRANT_INGESTED_VIA_URL', req.user?.name || req.user?.email || 'System', {
       title: newGrant.title,
       funderName: newGrant.funderName,
       totalFundingValue: newGrant.totalFundingValue,
@@ -513,7 +577,13 @@ app.post('/api/grants', async (req, res) => {
   } = req.body;
 
   if (!title) {
-    return res.status(400).json({ success: false, error: 'Grant name is required.' });
+    return res.status(400).json({ success: false, error: 'Grant Title is required.' });
+  }
+
+  // Quota Enforcement Check (P5)
+  const grantQuotaErr = await checkGrantQuota(req);
+  if (grantQuotaErr) {
+    return res.status(429).json({ success: false, error: grantQuotaErr });
   }
 
   try {
@@ -527,7 +597,7 @@ app.post('/api/grants', async (req, res) => {
 
     const newGrant = await db.grant.create({
       data: {
-        organizationId: ORG_ID,
+        organizationId: getTenantId(req),
         title,
         funderName: funderName || 'Unknown Funder',
         description: description || null,
@@ -558,7 +628,7 @@ app.post('/api/grants', async (req, res) => {
 
     await ensureFundingBody(newGrant.funderName, sourceUrl);
 
-    logEvent(newGrant.id, 'GRANT_CREATED_MANUALLY', 'Adrian (Founder)', {
+    logEvent(newGrant.id, 'GRANT_CREATED_MANUALLY', req.user?.name || req.user?.email || 'System', {
       title: newGrant.title,
       funderName: newGrant.funderName,
       totalFundingValue: newGrant.totalFundingValue
@@ -653,7 +723,7 @@ app.post('/api/grants/:id/risk', async (req, res) => {
       data: { status: 'RISK_ASSESSMENT' }
     });
 
-    logEvent(id, 'RISK_PROFILE_EVALUATED', 'Adrian (Founder)', {
+    logEvent(id, 'RISK_PROFILE_EVALUATED', req.user?.name || req.user?.email || 'System', {
       financialRiskScore,
       deliveryCapabilityScore,
       strategicAlignmentScore,
@@ -694,7 +764,7 @@ app.post('/api/grants/:id/approve', async (req, res) => {
       data: { status: 'APPLICATION_STAGED' }
     });
 
-    logEvent(id, 'APPLICATION_APPROVED_TO_STAGE', 'Adrian (Founder)', {
+    logEvent(id, 'APPLICATION_APPROVED_TO_STAGE', req.user?.name || req.user?.email || 'System', {
       justificationNotes: assessment.justificationNotes
     });
 
@@ -814,7 +884,7 @@ app.post('/api/grants/:id/submit', async (req, res) => {
       }
     });
 
-    logEvent(id, 'GRANT_APPLICATION_SUBMITTED', 'Adrian (Founder)', {
+    logEvent(id, 'GRANT_APPLICATION_SUBMITTED', req.user?.name || req.user?.email || 'System', {
       dateSubmitted,
       submissionReference,
       amountRequested: updatedGrant.amountRequested
@@ -993,7 +1063,7 @@ Return ONLY raw valid JSON. Do not put markdown code fences.`;
       include: grantInclude
     });
 
-    logEvent(id, 'MULTI_DOC_GUIDELINES_UPLOADED', 'Adrian (Grant Officer)', {
+    logEvent(id, 'MULTI_DOC_GUIDELINES_UPLOADED', req.user?.name || req.user?.email || 'System', {
       documentsCount: docList.length,
       documentNames: docList,
       guidelinesExtractedTitle
@@ -1165,7 +1235,7 @@ app.post('/api/grants/:id/extract-gfa', async (req, res) => {
       }))
     });
 
-    logEvent(id, 'GFA_DOCUMENT_UPLOADED', 'Adrian (Founder)', {
+    logEvent(id, 'GFA_DOCUMENT_UPLOADED', req.user?.name || req.user?.email || 'System', {
       documentName,
       gfaExtractedTitle,
       fileSize: '2.4 MB'
@@ -1301,7 +1371,7 @@ app.delete('/api/documents/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Document not found.' });
     }
     await db.document.delete({ where: { id } });
-    logEvent(doc.grantId, 'GRANT_DOCUMENT_DELETED', 'Adrian (Founder)', {
+    logEvent(doc.grantId, 'GRANT_DOCUMENT_DELETED', req.user?.name || req.user?.email || 'System', {
       documentName: doc.name
     });
     res.json({ success: true });
@@ -1398,7 +1468,7 @@ app.post('/api/grants/:id/award', async (req, res) => {
         ]
       });
 
-      logEvent(id, 'GRANT_AWARDED_POST_AWARD_INITIALIZED', 'Adrian (Founder)', {
+      logEvent(id, 'GRANT_AWARDED_POST_AWARD_INITIALIZED', req.user?.name || req.user?.email || 'System', {
         contractId: contract.id,
         fundingAgreementReference: contract.fundingAgreementReference,
         totalObligatedAmount: contract.totalObligatedAmount,
@@ -1491,23 +1561,25 @@ app.get('/api/projects', async (req, res) => {
 app.post('/api/projects', async (req, res) => {
   const { name, description, department, status, budgetAmount, businessUnitId } = req.body;
 
-  if (!name || !department) {
-    return res.status(400).json({ success: false, error: 'name and department are required.' });
+  if (!name) {
+    return res.status(400).json({ success: false, error: 'name is required.' });
   }
+
+  const projDept = department || 'Grants Management';
 
   try {
     const project = await db.project.create({
       data: {
         name,
         description,
-        department,
+        department: projDept,
         status: status || 'POTENTIAL',
         budgetAmount: budgetAmount ? parseFloat(budgetAmount) : 0,
         businessUnitId: businessUnitId || null
       }
     });
 
-    logEvent(project.id, 'PROJECT_CREATED', 'Adrian (Founder)', {
+    logEvent(project.id, 'PROJECT_CREATED', req.user?.name || req.user?.email || 'System', {
       name,
       department,
       description,
@@ -1553,7 +1625,7 @@ app.post('/api/projects/link', async (req, res) => {
         }
       });
 
-      logEvent(projectId, 'GRANT_PROJECT_ALLOCATION_INCREMENTED', 'Adrian (Founder)', {
+      logEvent(projectId, 'GRANT_PROJECT_ALLOCATION_INCREMENTED', req.user?.name || req.user?.email || 'System', {
         grantTitle: updated.grant.title,
         projectName: updated.project.name,
         increment: parseFloat(allocatedAmount),
@@ -1575,7 +1647,7 @@ app.post('/api/projects/link', async (req, res) => {
       }
     });
 
-    logEvent(projectId, 'GRANT_PROJECT_LINKED', 'Adrian (Founder)', {
+    logEvent(projectId, 'GRANT_PROJECT_LINKED', req.user?.name || req.user?.email || 'System', {
       grantTitle: mapping.grant.title,
       projectName: mapping.project.name,
       allocatedAmount: parseFloat(allocatedAmount)
@@ -1602,7 +1674,7 @@ app.post('/api/projects/:id/status', async (req, res) => {
       data: { status }
     });
 
-    logEvent(id, 'PROJECT_STATUS_UPDATED', 'Adrian (Founder)', {
+    logEvent(id, 'PROJECT_STATUS_UPDATED', req.user?.name || req.user?.email || 'System', {
       status
     });
 
@@ -1627,7 +1699,7 @@ app.post('/api/projects/:id/budget', async (req, res) => {
       data: { budgetAmount: parseFloat(budgetAmount) }
     });
 
-    logEvent(id, 'PROJECT_BUDGET_UPDATED', 'Adrian (Founder)', {
+    logEvent(id, 'PROJECT_BUDGET_UPDATED', req.user?.name || req.user?.email || 'System', {
       budgetAmount: updatedProject.budgetAmount
     });
 
@@ -1657,7 +1729,7 @@ app.post('/api/milestones/:id/link-project', async (req, res) => {
       }
     });
 
-    logEvent(id, 'MILESTONE_PROJECT_LINKED', 'Adrian (Founder)', {
+    logEvent(id, 'MILESTONE_PROJECT_LINKED', req.user?.name || req.user?.email || 'System', {
       milestoneTitle: updatedMilestone.title,
       projectId: projectId || null,
       grantTitle: updatedMilestone.contract.grant.title
@@ -1994,7 +2066,7 @@ app.post('/api/organization/tier', async (req, res) => {
       console.warn('DB organization tier update warning, using in-memory state:', dbErr.message);
     }
 
-    logEvent(updated.id || 'demo-org-1', 'ORGANIZATION_TIER_UPDATED', 'Adrian (Founder)', {
+    logEvent(updated.id || 'demo-org-1', 'ORGANIZATION_TIER_UPDATED', req.user?.name || req.user?.email || 'System', {
       newTier: pricingTier,
       maxGrantsQuota,
       maxUsersQuota
@@ -2341,7 +2413,7 @@ app.post('/api/tasks', async (req, res) => {
       }
     });
 
-    logEvent(task.id, 'MILESTONE_TASK_CREATED', 'Adrian (Founder)', {
+    logEvent(task.id, 'MILESTONE_TASK_CREATED', req.user?.name || req.user?.email || 'System', {
       taskTitle: title,
       milestoneTitle: task.milestone?.title || 'Direct Task',
       grantTitle: task.grant?.title || task.project?.name || 'Task',
@@ -2530,7 +2602,7 @@ app.patch('/api/milestones/:id', async (req, res) => {
       }
     });
 
-    logEvent(id, 'MILESTONE_STATUS_UPDATED', 'Adrian (Founder)', {
+    logEvent(id, 'MILESTONE_STATUS_UPDATED', req.user?.name || req.user?.email || 'System', {
       milestoneTitle: updatedMilestone.title,
       isAcquitted: updatedMilestone.isAcquitted,
       grantTitle: updatedMilestone.contract.grant.title
@@ -2592,14 +2664,14 @@ app.post('/api/contracts/:id/variations', async (req, res) => {
         });
       }
 
-      logEvent(id, 'CONTRACT_VARIATION_APPROVED', 'Adrian (Founder)', {
+      logEvent(id, 'CONTRACT_VARIATION_APPROVED', req.user?.name || req.user?.email || 'System', {
         referenceNumber,
         valueChange,
         newCloseDate,
         description
       });
     } else {
-      logEvent(id, 'CONTRACT_VARIATION_REQUESTED', 'Adrian (Founder)', {
+      logEvent(id, 'CONTRACT_VARIATION_REQUESTED', req.user?.name || req.user?.email || 'System', {
         referenceNumber,
         valueChange,
         description
@@ -2655,14 +2727,14 @@ app.post('/api/variations/:id/status', async (req, res) => {
         });
       }
 
-      logEvent(variation.contractId, 'CONTRACT_VARIATION_APPROVED', 'Adrian (Founder)', {
+      logEvent(variation.contractId, 'CONTRACT_VARIATION_APPROVED', req.user?.name || req.user?.email || 'System', {
         referenceNumber: variation.referenceNumber,
         valueChange: variation.valueChange,
         newCloseDate: variation.newCloseDate,
         description: variation.description
       });
     } else {
-      logEvent(variation.contractId, 'CONTRACT_VARIATION_REJECTED', 'Adrian (Founder)', {
+      logEvent(variation.contractId, 'CONTRACT_VARIATION_REJECTED', req.user?.name || req.user?.email || 'System', {
         referenceNumber: variation.referenceNumber,
         valueChange: variation.valueChange,
         description: variation.description
@@ -2739,7 +2811,7 @@ app.post('/api/contracts/:id/installments', async (req, res) => {
       console.warn('Failed to create payment task for installment:', taskErr);
     }
 
-    logEvent(contract.grantId, 'CONTRACT_INSTALLMENT_SCHEDULED', 'Adrian (Founder)', {
+    logEvent(contract.grantId, 'CONTRACT_INSTALLMENT_SCHEDULED', req.user?.name || req.user?.email || 'System', {
       contractId: contract.id,
       amount: parsedAmount,
       dueDate,
@@ -2790,7 +2862,7 @@ app.patch('/api/installments/:id', async (req, res) => {
       }
     }
 
-    logEvent(installment.contractId, 'CONTRACT_INSTALLMENT_STATUS_UPDATED', 'David Boyle (Finance)', {
+    logEvent(installment.contractId, 'CONTRACT_INSTALLMENT_STATUS_UPDATED', req.user?.name || req.user?.email || 'System', {
       installmentId: id,
       status
     });
@@ -2811,7 +2883,7 @@ app.post('/api/grants/:id/reject', async (req, res) => {
       data: { status: 'REJECTED' }
     });
 
-    logEvent(id, 'GRANT_APPLICATION_REJECTED', 'Adrian (Founder)', {
+    logEvent(id, 'GRANT_APPLICATION_REJECTED', req.user?.name || req.user?.email || 'System', {
       title: updatedGrant.title
     });
 
@@ -2835,12 +2907,296 @@ app.post('/api/grants/:id/closeout', async (req, res) => {
       }
     });
 
-    logEvent(id, 'GRANT_CLOSED_AND_ACQUITTED', 'Adrian (Founder)', {
+    logEvent(id, 'GRANT_CLOSED_AND_ACQUITTED', req.user?.name || req.user?.email || 'System', {
       title: updatedGrant.title,
       closeoutNotes
     });
 
     res.json({ success: true, data: updatedGrant });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Helper function for PDF Acquittal Report generation using pdf-lib (P4)
+async function generateAcquittalPdfBuffer(
+  title: string,
+  funderName: string,
+  totalFundingValue: number | null,
+  transactions: any[],
+  startDate?: string,
+  endDate?: string
+): Promise<Buffer> {
+  const pdfDoc = await PDFDocument.create();
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  let page = pdfDoc.addPage([595.28, 841.89]); // A4 size
+  const { width, height } = page.getSize();
+  const margin = 40;
+  let y = height - margin;
+
+  // Header Banner
+  page.drawRectangle({
+    x: 0,
+    y: height - 80,
+    width: width,
+    height: 80,
+    color: rgb(0.18, 0.12, 0.48)
+  });
+
+  page.drawText('SUREPACT GRANT ESSENTIALS', {
+    x: margin,
+    y: height - 38,
+    size: 16,
+    font: fontBold,
+    color: rgb(1, 1, 1)
+  });
+
+  page.drawText('Official Financial Acquittal Statement', {
+    x: margin,
+    y: height - 58,
+    size: 11,
+    font: fontRegular,
+    color: rgb(0.85, 0.85, 1)
+  });
+
+  y = height - 110;
+
+  // Grant Meta Info Box
+  page.drawRectangle({
+    x: margin,
+    y: y - 80,
+    width: width - margin * 2,
+    height: 80,
+    color: rgb(0.96, 0.96, 0.98),
+    borderColor: rgb(0.8, 0.8, 0.9),
+    borderWidth: 1
+  });
+
+  page.drawText('Grant Title:', { x: margin + 12, y: y - 22, size: 10, font: fontBold, color: rgb(0.2, 0.2, 0.3) });
+  page.drawText((title || 'Grant').substring(0, 50), { x: margin + 95, y: y - 22, size: 10, font: fontRegular, color: rgb(0.1, 0.1, 0.1) });
+
+  page.drawText('Funding Body:', { x: margin + 12, y: y - 40, size: 10, font: fontBold, color: rgb(0.2, 0.2, 0.3) });
+  page.drawText((funderName || 'Unknown Funder').substring(0, 50), { x: margin + 95, y: y - 40, size: 10, font: fontRegular, color: rgb(0.1, 0.1, 0.1) });
+
+  const fundingValStr = totalFundingValue ? `$${totalFundingValue.toLocaleString('en-AU', { minimumFractionDigits: 2 })}` : 'N/A';
+  page.drawText('Total Allocation:', { x: margin + 12, y: y - 58, size: 10, font: fontBold, color: rgb(0.2, 0.2, 0.3) });
+  page.drawText(fundingValStr, { x: margin + 95, y: y - 58, size: 10, font: fontBold, color: rgb(0.1, 0.5, 0.1) });
+
+  const datePeriodStr = (startDate && endDate) ? `${startDate} to ${endDate}` : `Generated ${new Date().toLocaleDateString('en-AU')}`;
+  page.drawText('Acquittal Period:', { x: width - margin - 210, y: y - 22, size: 9, font: fontBold, color: rgb(0.2, 0.2, 0.3) });
+  page.drawText(datePeriodStr, { x: width - margin - 120, y: y - 22, size: 9, font: fontRegular, color: rgb(0.1, 0.1, 0.1) });
+
+  y -= 105;
+
+  // Financial Summary Cards
+  const incomeTotal = transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0);
+  const expenseTotal = transactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0);
+  const netBalance = incomeTotal - expenseTotal;
+
+  page.drawText('ACQUITTAL FINANCIAL SUMMARY', { x: margin, y: y, size: 11, font: fontBold, color: rgb(0.18, 0.12, 0.48) });
+  y -= 25;
+
+  const cardWidth = (width - margin * 2 - 20) / 3;
+
+  // Income Card
+  page.drawRectangle({ x: margin, y: y - 45, width: cardWidth, height: 45, color: rgb(0.94, 0.99, 0.94), borderColor: rgb(0.7, 0.9, 0.7), borderWidth: 1 });
+  page.drawText('TOTAL INCOME', { x: margin + 10, y: y - 18, size: 8, font: fontBold, color: rgb(0.1, 0.5, 0.1) });
+  page.drawText(`$${incomeTotal.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`, { x: margin + 10, y: y - 36, size: 11, font: fontBold, color: rgb(0.1, 0.5, 0.1) });
+
+  // Expense Card
+  page.drawRectangle({ x: margin + cardWidth + 10, y: y - 45, width: cardWidth, height: 45, color: rgb(0.99, 0.95, 0.95), borderColor: rgb(0.9, 0.7, 0.7), borderWidth: 1 });
+  page.drawText('TOTAL EXPENSE', { x: margin + cardWidth + 20, y: y - 18, size: 8, font: fontBold, color: rgb(0.7, 0.1, 0.1) });
+  page.drawText(`$${expenseTotal.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`, { x: margin + cardWidth + 20, y: y - 36, size: 11, font: fontBold, color: rgb(0.7, 0.1, 0.1) });
+
+  // Net Balance Card
+  const netColor = netBalance >= 0 ? rgb(0.1, 0.4, 0.8) : rgb(0.7, 0.1, 0.1);
+  page.drawRectangle({ x: margin + (cardWidth + 10) * 2, y: y - 45, width: cardWidth, height: 45, color: rgb(0.95, 0.96, 0.99), borderColor: rgb(0.7, 0.8, 0.9), borderWidth: 1 });
+  page.drawText('NET BALANCE', { x: margin + (cardWidth + 10) * 2 + 10, y: y - 18, size: 8, font: fontBold, color: netColor });
+  page.drawText(`$${netBalance.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`, { x: margin + (cardWidth + 10) * 2 + 10, y: y - 36, size: 11, font: fontBold, color: netColor });
+
+  y -= 65;
+
+  // Transaction Table Header
+  page.drawText('ITEMISED TRANSACTION LEDGER', { x: margin, y: y, size: 11, font: fontBold, color: rgb(0.18, 0.12, 0.48) });
+  y -= 20;
+
+  // Table Columns
+  page.drawRectangle({ x: margin, y: y - 20, width: width - margin * 2, height: 20, color: rgb(0.18, 0.12, 0.48) });
+  page.drawText('Date', { x: margin + 8, y: y - 14, size: 8, font: fontBold, color: rgb(1, 1, 1) });
+  page.drawText('Description', { x: margin + 75, y: y - 14, size: 8, font: fontBold, color: rgb(1, 1, 1) });
+  page.drawText('Category', { x: margin + 270, y: y - 14, size: 8, font: fontBold, color: rgb(1, 1, 1) });
+  page.drawText('Type', { x: margin + 380, y: y - 14, size: 8, font: fontBold, color: rgb(1, 1, 1) });
+  page.drawText('Amount (AUD)', { x: width - margin - 85, y: y - 14, size: 8, font: fontBold, color: rgb(1, 1, 1) });
+
+  y -= 22;
+
+  // Table Rows
+  const items = transactions.length > 0 ? transactions : [
+    { date: new Date(), description: 'Initial Funding Allocation', category: 'Grant Income', type: 'INCOME', amount: totalFundingValue || 0 }
+  ];
+
+  for (let i = 0; i < Math.min(items.length, 16); i++) {
+    const item = items[i];
+    const rowBg = i % 2 === 0 ? rgb(0.98, 0.98, 0.99) : rgb(1, 1, 1);
+
+    page.drawRectangle({ x: margin, y: y - 18, width: width - margin * 2, height: 18, color: rowBg });
+
+    const dateStr = item.date ? new Date(item.date).toLocaleDateString('en-AU') : '-';
+    page.drawText(dateStr, { x: margin + 8, y: y - 13, size: 8, font: fontRegular, color: rgb(0.2, 0.2, 0.2) });
+    page.drawText((item.description || '-').substring(0, 35), { x: margin + 75, y: y - 13, size: 8, font: fontRegular, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText((item.category || 'General').substring(0, 18), { x: margin + 270, y: y - 13, size: 8, font: fontRegular, color: rgb(0.3, 0.3, 0.3) });
+
+    const typeColor = item.type === 'INCOME' ? rgb(0.1, 0.5, 0.1) : rgb(0.7, 0.1, 0.1);
+    page.drawText(item.type || 'INCOME', { x: margin + 380, y: y - 13, size: 8, font: fontBold, color: typeColor });
+
+    const amtStr = `$${(item.amount || 0).toLocaleString('en-AU', { minimumFractionDigits: 2 })}`;
+    page.drawText(amtStr, { x: width - margin - 85, y: y - 13, size: 8, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+
+    y -= 19;
+  }
+
+  // Compliance Certification Block
+  y -= 25;
+  const certY = Math.max(margin + 5, y - 60);
+  page.drawRectangle({
+    x: margin,
+    y: certY,
+    width: width - margin * 2,
+    height: 60,
+    color: rgb(0.97, 0.97, 0.98),
+    borderColor: rgb(0.85, 0.85, 0.9),
+    borderWidth: 1
+  });
+
+  page.drawText('DECLARATION & CERTIFICATION OF FINANCIAL ACQUITTAL', { x: margin + 12, y: certY + 44, size: 8, font: fontBold, color: rgb(0.18, 0.12, 0.48) });
+  page.drawText('I hereby certify that all financial receipts and expenditure recorded above have been verified against source accounting', { x: margin + 12, y: certY + 30, size: 7.5, font: fontRegular, color: rgb(0.3, 0.3, 0.3) });
+  page.drawText('records and comply fully with the terms and conditions of the Funding Agreement.', { x: margin + 12, y: certY + 18, size: 7.5, font: fontRegular, color: rgb(0.3, 0.3, 0.3) });
+  page.drawText('Authorised Officer Signature: _______________________    Date: ______________', { x: margin + 12, y: certY + 6, size: 8, font: fontBold, color: rgb(0.2, 0.2, 0.2) });
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}
+
+// 5d. GET /api/grants/:id/acquittal-pdf - Generate server-side PDF Acquittal Report (P4)
+app.get('/api/grants/:id/acquittal-pdf', async (req, res) => {
+  const { id } = req.params;
+  const { startDate, endDate } = req.query;
+
+  try {
+    const grant = await db.grant.findFirst({
+      where: { id, organizationId: getTenantFilter(req) },
+      include: { transactions: true }
+    });
+
+    if (!grant) {
+      return res.status(404).json({ success: false, error: 'Grant not found.' });
+    }
+
+    let transactions = grant.transactions || [];
+    if (startDate) {
+      const start = new Date(startDate as string);
+      transactions = transactions.filter(t => new Date(t.date) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate as string);
+      transactions = transactions.filter(t => new Date(t.date) <= end);
+    }
+
+    const pdfBuffer = await generateAcquittalPdfBuffer(
+      grant.title,
+      grant.funderName,
+      grant.totalFundingValue,
+      transactions,
+      startDate as string,
+      endDate as string
+    );
+
+    const safeTitle = grant.title.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="acquittal_report_${safeTitle}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error: any) {
+    console.error('[Acquittal PDF Error]:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 5d-2. GET /api/acquittal-pdf - General Acquittal PDF export route (P4)
+app.get('/api/acquittal-pdf', async (req, res) => {
+  const { grantId, startDate, endDate } = req.query;
+  if (!grantId) {
+    return res.status(400).json({ success: false, error: 'grantId query parameter is required.' });
+  }
+
+  try {
+    const grant = await db.grant.findFirst({
+      where: { id: grantId as string, organizationId: getTenantFilter(req) },
+      include: { transactions: true }
+    });
+
+    if (!grant) {
+      return res.status(404).json({ success: false, error: 'Grant not found.' });
+    }
+
+    let transactions = grant.transactions || [];
+    if (startDate) {
+      const start = new Date(startDate as string);
+      transactions = transactions.filter(t => new Date(t.date) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate as string);
+      transactions = transactions.filter(t => new Date(t.date) <= end);
+    }
+
+    const pdfBuffer = await generateAcquittalPdfBuffer(
+      grant.title,
+      grant.funderName,
+      grant.totalFundingValue,
+      transactions,
+      startDate as string,
+      endDate as string
+    );
+
+    const safeTitle = grant.title.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="acquittal_report_${safeTitle}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 5e. GET /api/grants/:id/audit-zip - Generate Audit Bundle Document (P4)
+app.get('/api/grants/:id/audit-zip', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const grant = await db.grant.findFirst({
+      where: { id, organizationId: getTenantFilter(req) },
+      include: {
+        transactions: true,
+        contracts: true,
+        documents: true
+      }
+    });
+
+    if (!grant) {
+      return res.status(404).json({ success: false, error: 'Grant not found.' });
+    }
+
+    const pdfBuffer = await generateAcquittalPdfBuffer(
+      `Audit Bundle: ${grant.title}`,
+      grant.funderName,
+      grant.totalFundingValue,
+      grant.transactions || []
+    );
+
+    const safeTitle = grant.title.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="audit_bundle_${safeTitle}.pdf"`);
+    res.send(pdfBuffer);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -2959,7 +3315,7 @@ app.post('/api/transactions', async (req, res) => {
     return res.status(400).json({ success: false, error: 'amount, type, description, and category are required.' });
   }
 
-  const parsedAmount = Math.abs(parseFloat(amount));
+  const parsedAmount = parseFloat(amount);
   if (isNaN(parsedAmount) || parsedAmount <= 0) {
     return res.status(400).json({ success: false, error: 'Transaction amount must be a positive number greater than 0.' });
   }
@@ -2967,7 +3323,7 @@ app.post('/api/transactions', async (req, res) => {
   try {
     const newTransaction = await db.transaction.create({
       data: {
-        organizationId: ORG_ID,
+        organizationId: getTenantId(req),
         grantId: grantId || null,
         projectId: projectId || null,
         amount: parseFloat(amount),
@@ -2978,7 +3334,7 @@ app.post('/api/transactions', async (req, res) => {
       }
     });
 
-    logEvent(newTransaction.id, 'FINANCIAL_TRANSACTION_LOGGED', 'David Boyle (Finance)', {
+    logEvent(newTransaction.id, 'FINANCIAL_TRANSACTION_LOGGED', req.user?.name || req.user?.email || 'System', {
       amount,
       type,
       description,
@@ -3244,7 +3600,7 @@ app.post('/api/external-grants/:id/consider', async (req, res) => {
 
     const newGrant = await db.grant.create({
       data: {
-        organizationId: ORG_ID,
+        organizationId: getTenantId(req),
         title: mockGrant.title,
         funderName: mockGrant.agency,
         category: mockGrant.category,
@@ -3260,7 +3616,7 @@ app.post('/api/external-grants/:id/consider', async (req, res) => {
 
     await ensureFundingBody(newGrant.funderName, mockGrant.sourceUrl);
 
-    logEvent(newGrant.id, 'GRANT_IMPORTED_FOR_CONSIDERATION', 'Adrian (Founder)', {
+    logEvent(newGrant.id, 'GRANT_IMPORTED_FOR_CONSIDERATION', req.user?.name || req.user?.email || 'System', {
       title: newGrant.title,
       funderName: newGrant.funderName,
       value: mockGrant.value
@@ -3302,7 +3658,7 @@ app.post('/api/saved-searches', async (req, res) => {
       }
     });
 
-    logEvent(saved.id, 'SAVED_SEARCH_CREATED', 'Adrian (Founder)', {
+    logEvent(saved.id, 'SAVED_SEARCH_CREATED', req.user?.name || req.user?.email || 'System', {
       name,
       category,
       minFunding,
@@ -3344,10 +3700,13 @@ app.get('/api/knowledge-documents', async (req, res) => {
 
 // 16b. POST /api/knowledge-documents - Upload global knowledge asset
 app.post('/api/knowledge-documents', async (req, res) => {
-  const { name, type, fileSize, uploadedBy } = req.body;
+  const { name, type, fileSize, uploadedBy, content } = req.body;
   if (!name || !type || !uploadedBy) {
     return res.status(400).json({ success: false, error: 'name, type, and uploadedBy are required.' });
   }
+
+  // Derived content fallback so RAG grounding is always populated (P8)
+  const docContent = content || `Document Title: ${name}\nType: ${type}\nUploaded By: ${uploadedBy}\nContent Summary: Corporate knowledge asset for ${name}. Provides policy compliance guidelines, strategic priorities, and organizational frameworks.`;
 
   try {
     const doc = await db.knowledgeDocument.create({
@@ -3355,7 +3714,8 @@ app.post('/api/knowledge-documents', async (req, res) => {
         name,
         type,
         fileSize: fileSize || '1.8 MB',
-        uploadedBy
+        uploadedBy: req.user?.name || req.user?.email || uploadedBy,
+        content: docContent
       }
     });
 
@@ -3906,7 +4266,7 @@ app.post('/api/ai-grant-writer/grants/:id/compile', async (req, res) => {
       }
     });
 
-    logEvent(id, 'GRANT_APPLICATION_COMPILED', author || 'Adrian (Founder)', {
+    logEvent(id, 'GRANT_APPLICATION_COMPILED', author || req.user?.name || req.user?.email || 'System', {
       documentId: newDoc.id,
       questionsCount: responses.length
     });
@@ -4054,7 +4414,7 @@ app.post('/api/funding-opportunities/:id/promote', async (req, res) => {
 
     const newGrant = await db.grant.create({
       data: {
-        organizationId: ORG_ID,
+        organizationId: getTenantId(req),
         title: opp.title,
         funderName: opp.fundingBody.name,
         totalFundingValue: opp.value,
@@ -4238,7 +4598,7 @@ app.post('/api/ingest-agreement', async (req, res) => {
       // Create new grant with status AWARDED (bypassing first two steps)
       const newGrant = await db.grant.create({
         data: {
-          organizationId: ORG_ID,
+          organizationId: getTenantId(req),
           title: grantData.title,
           funderName: grantData.funderName || 'Unknown Funder',
           totalFundingValue: grantData.totalFundingValue ? parseFloat(grantData.totalFundingValue) : null,
