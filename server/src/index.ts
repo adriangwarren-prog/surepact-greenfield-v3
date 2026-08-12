@@ -451,6 +451,9 @@ const grantInclude = {
 };
 
 const getTenantId = (req: any): string => {
+  if (req.headers && req.headers['x-tenant-id']) {
+    return req.headers['x-tenant-id'];
+  }
   if (req.user && req.user.organizationId) {
     return req.user.organizationId;
   }
@@ -459,9 +462,6 @@ const getTenantId = (req: any): string => {
 
 const getTenantFilter = (req: any) => {
   const tenantId = getTenantId(req);
-  if (tenantId === 'demo-org-1' || tenantId === '99999999-8888-7777-6666-555555555555' || !tenantId) {
-    return { in: ['demo-org-1', '99999999-8888-7777-6666-555555555555'] };
-  }
   return tenantId;
 };
 
