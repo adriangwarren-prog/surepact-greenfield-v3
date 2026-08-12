@@ -932,11 +932,12 @@ function App() {
     fetchData();
   };
 
-  const getAuthHeaders = (extraHeaders: Record<string, string> = {}) => {
-    const password = localStorage.getItem('platform_password') || 'SurePact2026!';
+  const getAuthHeaders = (extraHeaders: Record<string, string> = {}, overrideOrgId?: string) => {
+    const token = localStorage.getItem('surepact_jwt_token') || localStorage.getItem('platform_password') || 'SurePact2026!';
+    const tenantId = overrideOrgId || organization?.id || 'demo-org-1';
     return {
-      'Authorization': `Bearer ${password}`,
-      'x-tenant-id': organization?.id || 'demo-org-1',
+      'Authorization': `Bearer ${token}`,
+      'x-tenant-id': tenantId,
       ...extraHeaders
     };
   };
@@ -1281,27 +1282,35 @@ function App() {
   const [savingGlobalDoc, setSavingGlobalDoc] = useState(false);
 
   // Fetch all data
-  const fetchData = async () => {
+  const fetchData = async (targetOrgId?: string | any, isCleanOverride?: boolean | any) => {
     setRefreshing(true);
+    const cleanOrgId = typeof targetOrgId === 'string' ? targetOrgId : undefined;
+    const cleanIsClean = typeof isCleanOverride === 'boolean' ? isCleanOverride : undefined;
+
+    const activeOrgId = cleanOrgId || organization?.id || 'demo-org-1';
+    const isClean = typeof cleanIsClean === 'boolean' ? cleanIsClean : isCleanTenantWorkspace;
+
     fetchOrganization();
-    if (isCleanTenantWorkspace) {
+    if (isClean) {
       applyCleanWorkspaceState();
       setRefreshing(false);
       return;
     }
     try {
+      const headers = getAuthHeaders({}, activeOrgId);
+
       // 1. Fetch grants
-      const gRes = await fetch(`${API_BASE}/grants`);
+      const gRes = await fetch(`${API_BASE}/grants`, { headers });
       const gData = await gRes.json();
       if (gData.success) setGrants(gData.data);
 
       // 2. Fetch projects
-      const pRes = await fetch(`${API_BASE}/projects`);
+      const pRes = await fetch(`${API_BASE}/projects`, { headers });
       const pData = await pRes.json();
       if (pData.success) setProjects(pData.data);
 
       // 3. Fetch users
-      const uRes = await fetch(`${API_BASE}/users`);
+      const uRes = await fetch(`${API_BASE}/users`, { headers });
       const uData = await uRes.json();
       if (uData.success) {
         setUsers(uData.data);
@@ -1317,12 +1326,12 @@ function App() {
 
       // 4. Fetch finances
       const fUrl = financeGrantFilter ? `${API_BASE}/finances?grantId=${financeGrantFilter}` : `${API_BASE}/finances`;
-      const fRes = await fetch(fUrl);
+      const fRes = await fetch(fUrl, { headers });
       const fData = await fRes.json();
       if (fData.success) setFinances(fData.data);
 
       // 5. Fetch audit logs
-      const lRes = await fetch(`${API_BASE}/audit-ledger`);
+      const lRes = await fetch(`${API_BASE}/audit-ledger`, { headers });
       const lData = await lRes.json();
       if (lData.success) setLedger(lData.data);
 
@@ -1345,7 +1354,7 @@ function App() {
       fetchGlobalDocs();
 
       // 11. Fetch departments
-      const dRes = await fetch(`${API_BASE}/departments`);
+      const dRes = await fetch(`${API_BASE}/departments`, { headers });
       const dData = await dRes.json();
       if (dData.success) setDepartments(dData.data);
 
@@ -3999,7 +4008,7 @@ function App() {
           {/* Logo container */}
           <div style={{ textAlign: 'center', marginBottom: '4px' }}>
             <img 
-              src="https://surepact.com/wp-content/uploads/2024/02/0224_Surepact_Logo.svg" 
+              src="/surepact-logo-full.png" 
               alt="SurePact Logo" 
               style={{ width: '160px', height: 'auto', display: 'block', margin: '0 auto 8px' }} 
             />
@@ -4224,7 +4233,7 @@ function App() {
         <div className="logo-container">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
             <img 
-              src="https://surepact.com/wp-content/uploads/2024/02/0224_Surepact_Logo-Reversed.svg" 
+              src="/surepact-logo-full.png" 
               alt="SurePact Logo" 
               style={{ width: '135px', height: 'auto', display: 'block' }} 
             />
