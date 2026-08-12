@@ -1,9 +1,11 @@
 {
   "version": 2,
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "https://surepact-greenfield-v2.onrender.com/api/$1"
     },
     {
       "source": "/((?!api/).*)",

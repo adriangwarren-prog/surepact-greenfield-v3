@@ -1,6 +1,9 @@
 {
   "name": "surepact-greenfield-v3",
   "version": "3.0.0",
+  "scripts": {
+    "build": "cd client && npm install && npm run build"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "axios": "^1.6.8",
