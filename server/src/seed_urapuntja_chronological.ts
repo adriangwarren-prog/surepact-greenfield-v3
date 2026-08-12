@@ -16,32 +16,7 @@ export async function seedChronologicalUrapuntjaDemoForOrg(ORG_ID = 'demo-org-1'
   // 1. Ensure PDF assets exist on disk
   ensurePdfAssetsOnDisk();
 
-  // 2. Wipe database in reverse foreign-key order
-  console.log('🧹 Purging all legacy test data...');
-  await db.auditLog.deleteMany({});
-  await db.knowledgeDocument.deleteMany({});
-  await db.businessUnitUser.deleteMany({});
-  await db.contactInteraction.deleteMany({});
-  await db.fundingOpportunity.deleteMany({});
-  await db.fundingBodyContact.deleteMany({});
-  await db.fundingBody.deleteMany({});
-  await db.document.deleteMany({});
-  await db.transaction.deleteMany({});
-  await db.contractVariation.deleteMany({});
-  await db.milestoneTask.deleteMany({});
-  await db.milestone.deleteMany({});
-  await db.installment.deleteMany({});
-  await db.contract.deleteMany({});
-  await db.grantProjectMapping.deleteMany({});
-  await db.project.deleteMany({});
-  await db.riskAssessment.deleteMany({});
-  await db.grantRequirementResponse.deleteMany({});
-  await db.grant.deleteMany({});
-  await db.businessUnit.deleteMany({});
-  await db.department.deleteMany({});
-  await db.user.deleteMany({});
-
-  console.log('✅ Database completely purged.');
+  // 2. Seeding tenancy data...
 
   // 3. Seed Departments & Business Units
   console.log('🏢 Seeding Urapuntja Health Service Org Structure...');
