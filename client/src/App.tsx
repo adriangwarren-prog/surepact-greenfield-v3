@@ -823,12 +823,19 @@ function App() {
   const [crmSubTab, setCrmSubTab] = useState<'contacts' | 'opportunities'>('contacts');
 
   // Tenant Organization & Pricing Tier state
-  const [organization, setOrganization] = useState<any>(null);
+  const [organization, setOrganization] = useState<any>(() => ({
+    id: 'demo-org-1',
+    name: 'Urapuntja Health Service Aboriginal Corporation',
+    sector: 'ACCHO',
+    state: 'NT',
+    pricingTier: 'ENTERPRISE',
+    stats: { grantsCount: 35, usersCount: 7, daysRemaining: 14, isTrialActive: true }
+  }));
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [showTierSwitcherModal, setShowTierSwitcherModal] = useState(false);
   const [onboardOrgName, setOnboardOrgName] = useState('');
-  const [onboardSector, setOnboardSector] = useState<'LOCAL_GOVERNMENT' | 'ACCHO' | 'NOT_FOR_PROFIT' | 'HEALTHCARE' | 'EDUCATION' | 'ENVIRONMENT_COMMUNITY'>('LOCAL_GOVERNMENT');
-  const [onboardState, setOnboardState] = useState('QLD');
+  const [onboardSector, setOnboardSector] = useState<'LOCAL_GOVERNMENT' | 'ACCHO' | 'NOT_FOR_PROFIT' | 'HEALTHCARE' | 'EDUCATION' | 'ENVIRONMENT_COMMUNITY'>('ACCHO');
+  const [onboardState, setOnboardState] = useState('NT');
   const [onboardAdminName, setOnboardAdminName] = useState('Adrian Warren');
   const [onboardAdminEmail, setOnboardAdminEmail] = useState('adrian.warren@surepact.com');
   const [onboardTier, setOnboardTier] = useState<'FREE_TRIAL' | 'STARTER' | 'ENTERPRISE'>('FREE_TRIAL');
@@ -839,42 +846,18 @@ function App() {
   const defaultTenants = [
     {
       id: 'demo-org-1',
-      name: 'SurePact Primary Council Tenant',
-      sector: 'LOCAL_GOVERNMENT',
-      state: 'QLD',
-      pricingTier: 'ENTERPRISE',
-      isClean: false
-    },
-    {
-      id: 'demo-org-2',
-      name: 'Townsville City Council',
-      sector: 'LOCAL_GOVERNMENT',
-      state: 'QLD',
-      pricingTier: 'ENTERPRISE',
-      isClean: true
-    },
-    {
-      id: 'demo-org-3',
-      name: 'UHSAC Aboriginal Corp',
+      name: 'Urapuntja Health Service Aboriginal Corporation',
       sector: 'ACCHO',
       state: 'NT',
-      pricingTier: 'STARTER',
-      isClean: true
-    },
-    {
-      id: 'demo-org-4',
-      name: 'Carers NT',
-      sector: 'NOT_FOR_PROFIT',
-      state: 'NT',
-      pricingTier: 'STARTER',
-      isClean: true
+      pricingTier: 'ENTERPRISE',
+      isClean: false
     }
   ];
 
   const [tenantsList, setTenantsList] = useState<any[]>(() => {
     try {
-      const stored = localStorage.getItem('surepact_tenants_registry');
-      if (stored) return JSON.parse(stored);
+      // Purge any stale legacy local storage entries from previous builds
+      localStorage.removeItem('surepact_tenants_registry');
       return defaultTenants;
     } catch {
       return defaultTenants;
@@ -902,6 +885,7 @@ function App() {
   };
 
   const handleSwitchTenant = (tenant: any) => {
+    const isClean = Boolean(tenant.isClean);
     setOrganization({
       id: tenant.id,
       name: tenant.name,
@@ -909,13 +893,13 @@ function App() {
       state: tenant.state,
       pricingTier: tenant.pricingTier,
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-      stats: { grantsCount: tenant.isClean ? 0 : grants.length, usersCount: users.length, daysRemaining: 14, isTrialActive: true }
+      stats: { grantsCount: isClean ? 0 : 35, usersCount: users.length, daysRemaining: 14, isTrialActive: true }
     });
-    setIsCleanTenantWorkspace(tenant.isClean);
-    if (tenant.isClean) {
+    setIsCleanTenantWorkspace(isClean);
+    if (isClean) {
       applyCleanWorkspaceState();
     } else {
-      fetchData();
+      fetchData(tenant.id, false);
     }
     setShowTenantDropdown(false);
   };
