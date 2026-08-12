@@ -171,18 +171,18 @@ export async function seedChronologicalUrapuntjaDemo() {
     }
 
     // 7. Seed 12 Projects per tenancy
-    const pClinicOps = await db.project.create({ data: { organizationId: ORG_ID, name: 'Soapy Bore Central Primary Clinic Operations 2024-2026', description: 'Core primary care, pharmacy dispensing, emergency triage, and telehealth services.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1850000, businessUnitId: buPrimary.id } });
-    const pMobileVans = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Mobile 4WD Clinic Van Expansion', description: 'Procurement and weekly clinical operations of 4WD mobile health vans across 16 homelands.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 615000, businessUnitId: buFleet.id } });
-    const pBirthing = await db.project.create({ data: { organizationId: ORG_ID, name: 'Birthing on Country Maternal & Child Health Initiative', description: 'Culturally safe maternal care, local midwifery training, and antenatal/postnatal visits.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1720000, businessUnitId: buMaternal.id } });
-    const pWaterSolar = await db.project.create({ data: { organizationId: ORG_ID, name: 'Outstation Emergency Water & Solar Microgrid Upgrade', description: 'Reverse osmosis water filtration plants and solar battery storage across outer homelands.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 945000, businessUnitId: buInfra.id } });
-    const pTelehealth = await db.project.create({ data: { organizationId: ORG_ID, name: 'Chronic Disease Telehealth & Digital Health Hub', description: 'Digital ECGs, portable ultrasound units, and satellite connection for remote consultations.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1290000, businessUnitId: buPrimary.id } });
-    const pYouth = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Youth Well-being & Recreation Spaces', description: 'Youth sports equipment, mental health workshops, and community gathering spaces.', department: 'Homelands & Infrastructure', status: 'CLOSED', budgetAmount: 510000, businessUnitId: buInfra.id } });
-    const pCancer = await db.project.create({ data: { organizationId: ORG_ID, name: 'First Nations Cancer Screening & Community Support Unit', description: 'Mobile cancer screening outreach, education campaigns, and patient navigation.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1130000, businessUnitId: buPrimary.id } });
-    const pHousing = await db.project.create({ data: { organizationId: ORG_ID, name: 'Remote Healthcare Staff Housing & Retention Program', description: 'Staff housing maintenance, retention allowances, and clinical worker professional development.', department: 'Executive & Governance', status: 'IN_PROGRESS', budgetAmount: 1240000, businessUnitId: buCEO.id } });
-    const pArlparra = await db.project.create({ data: { organizationId: ORG_ID, name: 'Arlparra Regional Health Hub Infrastructure Expansion', description: 'Constructing consultation rooms, storage sheds, and emergency generator housing at Arlparra.', department: 'Homelands & Infrastructure', status: 'CLOSED', budgetAmount: 1350000, businessUnitId: buInfra.id } });
-    const pEyeHearing = await db.project.create({ data: { organizationId: ORG_ID, name: 'First Nations Eye & Hearing Remote Screening Program', description: 'Audiology and ophthalmology screening for children and Elders across 16 homelands.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 335000, businessUnitId: buPrimary.id } });
-    const pFloodResilience = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Emergency Flood Resilience & Power Grid', description: 'Emergency food stores, satellite backup power, and flood relief access pathways.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 750000, businessUnitId: buInfra.id } });
-    const pAOD = await db.project.create({ data: { organizationId: ORG_ID, name: 'Alcohol & Other Drugs Prevention & Outreach Service', description: 'Community counseling, harm reduction education, and social emotional well-being support.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 520000, businessUnitId: buPrimary.id } });
+    const pClinicOps = await db.project.create({ data: { organizationId: ORG_ID, name: 'Soapy Bore Central Primary Clinic Operations 2024-2026', description: 'Core primary care, pharmacy dispensing, emergency triage, and telehealth services.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1850000 } });
+    const pMobileVans = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Mobile 4WD Clinic Van Expansion', description: 'Procurement and weekly clinical operations of 4WD mobile health vans across 16 homelands.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 615000 } });
+    const pBirthing = await db.project.create({ data: { organizationId: ORG_ID, name: 'Birthing on Country Maternal & Child Health Initiative', description: 'Culturally safe maternal care, local midwifery training, and antenatal/postnatal visits.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1720000 } });
+    const pWaterSolar = await db.project.create({ data: { organizationId: ORG_ID, name: 'Outstation Emergency Water & Solar Microgrid Upgrade', description: 'Reverse osmosis water filtration plants and solar battery storage across outer homelands.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 945000 } });
+    const pTelehealth = await db.project.create({ data: { organizationId: ORG_ID, name: 'Chronic Disease Telehealth & Digital Health Hub', description: 'Digital ECGs, portable ultrasound units, and satellite connection for remote consultations.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1290000 } });
+    const pYouth = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Youth Well-being & Recreation Spaces', description: 'Youth sports equipment, mental health workshops, and community gathering spaces.', department: 'Homelands & Infrastructure', status: 'CLOSED', budgetAmount: 510000 } });
+    const pCancer = await db.project.create({ data: { organizationId: ORG_ID, name: 'First Nations Cancer Screening & Community Support Unit', description: 'Mobile cancer screening outreach, education campaigns, and patient navigation.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 1130000 } });
+    const pHousing = await db.project.create({ data: { organizationId: ORG_ID, name: 'Remote Healthcare Staff Housing & Retention Program', description: 'Staff housing maintenance, retention allowances, and clinical worker professional development.', department: 'Executive & Governance', status: 'IN_PROGRESS', budgetAmount: 1240000 } });
+    const pArlparra = await db.project.create({ data: { organizationId: ORG_ID, name: 'Arlparra Regional Health Hub Infrastructure Expansion', description: 'Constructing consultation rooms, storage sheds, and emergency generator housing at Arlparra.', department: 'Homelands & Infrastructure', status: 'CLOSED', budgetAmount: 1350000 } });
+    const pEyeHearing = await db.project.create({ data: { organizationId: ORG_ID, name: 'First Nations Eye & Hearing Remote Screening Program', description: 'Audiology and ophthalmology screening for children and Elders across 16 homelands.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 335000 } });
+    const pFloodResilience = await db.project.create({ data: { organizationId: ORG_ID, name: 'Utopia Homelands Emergency Flood Resilience & Power Grid', description: 'Emergency food stores, satellite backup power, and flood relief access pathways.', department: 'Homelands & Infrastructure', status: 'IN_PROGRESS', budgetAmount: 750000 } });
+    const pAOD = await db.project.create({ data: { organizationId: ORG_ID, name: 'Alcohol & Other Drugs Prevention & Outreach Service', description: 'Community counseling, harm reduction education, and social emotional well-being support.', department: 'Health & Clinical Services', status: 'IN_PROGRESS', budgetAmount: 520000 } });
 
     // 8. CATEGORY A: 10 CLOSED GRANTS
     const closedGrantsData = [
@@ -221,8 +221,7 @@ export async function seedChronologicalUrapuntjaDemo() {
           guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
           requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Project Delivery Plan', 'Risk Assessment Matrix']),
           costItems: JSON.stringify([{ item: 'Clinical Operations', cost: data.value * 0.7 }, { item: 'Equipment & Logistics', cost: data.value * 0.3 }]),
-          closeoutNotes: 'All project deliverables met on schedule. Financial acquittal approved by funder.',
-          businessUnitId: buGrants.id
+          closeoutNotes: 'All project deliverables met on schedule. Financial acquittal approved by funder.'
         }
       });
 
@@ -274,8 +273,7 @@ export async function seedChronologicalUrapuntjaDemo() {
           guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
           guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
           requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Clinical Protocol', 'Risk Management Plan']),
-          costItems: JSON.stringify([{ item: 'Clinical Personnel & Travel', cost: data.value * 0.75 }, { item: 'Medical Supplies & Equipment', cost: data.value * 0.25 }]),
-          businessUnitId: buGrants.id
+          costItems: JSON.stringify([{ item: 'Clinical Personnel & Travel', cost: data.value * 0.75 }, { item: 'Medical Supplies & Equipment', cost: data.value * 0.25 }])
         }
       });
 
@@ -339,8 +337,7 @@ export async function seedChronologicalUrapuntjaDemo() {
           guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
           requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Research Protocol', 'Ethics Approval']),
           costItems: JSON.stringify([{ item: 'Research Personnel', cost: data.value * 0.7 }, { item: 'Travel & Operations', cost: data.value * 0.3 }]),
-          closeoutNotes: `Application submitted on ${data.submitted}. Funder notified outcome as unsuccessful.`,
-          businessUnitId: buGrants.id
+          closeoutNotes: `Application submitted on ${data.submitted}. Funder notified outcome as unsuccessful.`
         }
       });
 
@@ -375,8 +372,7 @@ export async function seedChronologicalUrapuntjaDemo() {
           guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
           guidelinesExtractedTitle: `FUNDER GUIDELINES - ${data.title.toUpperCase()}`,
           requiredDocuments: JSON.stringify(['Application Proposal', 'Financial Budget', 'Risk Assessment']),
-          costItems: JSON.stringify([{ item: 'Operational Service Delivery', cost: data.value }]),
-          businessUnitId: buGrants.id
+          costItems: JSON.stringify([{ item: 'Operational Service Delivery', cost: data.value }])
         }
       });
 
