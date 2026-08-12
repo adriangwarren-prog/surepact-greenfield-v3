@@ -64,19 +64,24 @@ export async function seedChronologicalUrapuntjaDemo() {
   const uChristine = await db.user.create({ data: { name: 'Christine Malinao', email: 'christine.malinao@urapuntja.org.au', department: 'Finance & Grant Compliance', role: 'staff', status: 'Active', passwordHash: defaultPassHash } });
   const uNicole = await db.user.create({ data: { name: 'Nicole Sherwin', email: 'nicole.sherwin@urapuntja.org.au', department: 'Finance & Grant Compliance', role: 'staff', status: 'Active', passwordHash: defaultPassHash } });
 
-  await db.businessUnitUser.createMany({
-    data: [
-      { userId: uAdrian.id, businessUnitId: buGrants.id },
-      { userId: uAdrian.id, businessUnitId: buCEO.id },
-      { userId: uMelissa.id, businessUnitId: buCEO.id },
-      { userId: uBoyle.id, businessUnitId: buPrimary.id },
-      { userId: uJenkins.id, businessUnitId: buMaternal.id },
-      { userId: uDeluis.id, businessUnitId: buInfra.id },
-      { userId: uDeluis.id, businessUnitId: buFleet.id },
-      { userId: uChristine.id, businessUnitId: buGrants.id },
-      { userId: uNicole.id, businessUnitId: buGrants.id }
-    ]
-  });
+  const buUserMappings = [
+    { userId: uAdrian.id, businessUnitId: buGrants.id },
+    { userId: uAdrian.id, businessUnitId: buCEO.id },
+    { userId: uMelissa.id, businessUnitId: buCEO.id },
+    { userId: uBoyle.id, businessUnitId: buPrimary.id },
+    { userId: uJenkins.id, businessUnitId: buMaternal.id },
+    { userId: uDeluis.id, businessUnitId: buInfra.id },
+    { userId: uDeluis.id, businessUnitId: buFleet.id },
+    { userId: uChristine.id, businessUnitId: buGrants.id },
+    { userId: uNicole.id, businessUnitId: buGrants.id }
+  ];
+  for (const m of buUserMappings) {
+    try {
+      await db.businessUnitUser.create({ data: m });
+    } catch (e) {
+      console.warn('Skipping duplicate or invalid buUser mapping:', m);
+    }
+  }
 
   // 5. Seed Funding Bodies ONCE
   console.log('🏛️ Seeding Funding Bodies...');
