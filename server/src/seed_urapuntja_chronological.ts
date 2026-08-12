@@ -110,23 +110,15 @@ export async function seedChronologicalUrapuntjaDemo() {
     return gfaName;
   };
 
-  const seedPreAwardHistory = async (grantId: string, grantTitle: string) => {
-    await db.grantRequirementResponse.createMany({
-      data: [
-        { grantId, requirementKey: 'Criteria 1: Organizational Capability & Governance', question: 'Demonstrate your organization capacity and clinical governance framework to deliver primary health services across remote Aboriginal homelands.', responseText: 'Urapuntja Health Service Aboriginal Corporation (ICN: 838) has operated primary healthcare clinics across 16 Utopia Homelands for over 35 years.', status: 'APPROVED' },
-        { grantId, requirementKey: 'Criteria 2: Project Design & Community Engagement', question: 'Detail the proposed service delivery model, community consultation process, and measurable outcomes for homeland residents.', responseText: 'The project utilizes a hybrid care delivery model combining central primary clinic facilities at Soapy Bore with mobile 4WD clinical outreach vans.', status: 'APPROVED' },
-        { grantId, requirementKey: 'Criteria 3: Financial Management & Value for Money', question: 'Provide a detailed budget breakdown, co-contribution sources, and demonstrate value for money.', responseText: 'Total project budget is backed by independent CPA financial auditing. Direct clinical service delivery accounts for 82% of budget allocation.', status: 'APPROVED' }
-      ]
-    });
+  const seedPreAwardHistory = async (grantId: string, grantTitle: string, orgId: string) => {
+    await db.grantRequirementResponse.create({ data: { grantId, requirementKey: 'Criteria 1: Organizational Capability & Governance', question: 'Demonstrate your organization capacity and clinical governance framework to deliver primary health services across remote Aboriginal homelands.', responseText: 'Urapuntja Health Service Aboriginal Corporation (ICN: 838) has operated primary healthcare clinics across 16 Utopia Homelands for over 35 years.', status: 'APPROVED' } });
+    await db.grantRequirementResponse.create({ data: { grantId, requirementKey: 'Criteria 2: Project Design & Community Engagement', question: 'Detail the proposed service delivery model, community consultation process, and measurable outcomes for homeland residents.', responseText: 'The project utilizes a hybrid care delivery model combining central primary clinic facilities at Soapy Bore with mobile 4WD clinical outreach vans.', status: 'APPROVED' } });
+    await db.grantRequirementResponse.create({ data: { grantId, requirementKey: 'Criteria 3: Financial Management & Value for Money', question: 'Provide a detailed budget breakdown, co-contribution sources, and demonstrate value for money.', responseText: 'Total project budget is backed by independent CPA financial auditing. Direct clinical service delivery accounts for 82% of budget allocation.', status: 'APPROVED' } });
 
-    await db.milestoneTask.createMany({
-      data: [
-        { grantId, title: 'Draft Section 1: Organizational Profile & Clinical Capability', description: 'Compile historical clinical metrics and board governance structure.', assignedToUserId: uAdrian.id, dueDate: new Date('2024-10-15'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-10-14') },
-        { grantId, title: 'Extract Guidelines Requirements & Mandatory Checklist', description: 'Review funder guidelines PDF and extract selection criteria.', assignedToUserId: uAdrian.id, dueDate: new Date('2024-10-18'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-10-17') },
-        { grantId, title: 'Compile Audited Financial Statements & Budget Costing', description: 'Attach CPA financial audit and cost item schedule.', assignedToUserId: uChristine.id, dueDate: new Date('2024-10-25'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-10-24') },
-        { grantId, title: 'Board Approval Sign-Off & Application Submission', description: 'Final CEO sign-off and electronic submission to funder portal.', assignedToUserId: uMelissa.id, dueDate: new Date('2024-11-01'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-11-01') }
-      ]
-    });
+    await db.milestoneTask.create({ data: { organizationId: orgId, grantId, title: 'Draft Section 1: Organizational Profile & Clinical Capability', description: 'Compile historical clinical metrics and board governance structure.', assignedToUserId: uAdrian.id, dueDate: new Date('2024-10-15'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-10-14') } });
+    await db.milestoneTask.create({ data: { organizationId: orgId, grantId, title: 'Extract Guidelines Requirements & Mandatory Checklist', description: 'Review funder guidelines PDF and extract selection criteria.', assignedToUserId: uAdrian.id, dueDate: new Date('2024-10-18'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-10-17') } });
+    await db.milestoneTask.create({ data: { organizationId: orgId, grantId, title: 'Compile Audited Financial Statements & Budget Costing', description: 'Attach CPA financial audit and cost item schedule.', assignedToUserId: uChristine.id, dueDate: new Date('2024-10-25'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-10-24') } });
+    await db.milestoneTask.create({ data: { organizationId: orgId, grantId, title: 'Board Approval Sign-Off & Application Submission', description: 'Final CEO sign-off and electronic submission to funder portal.', assignedToUserId: uMelissa.id, dueDate: new Date('2024-11-01'), status: 'COMPLETED', stage: 'APPLICATION', completedAt: new Date('2024-11-01') } });
 
     await db.document.create({
       data: {
@@ -229,7 +221,7 @@ export async function seedChronologicalUrapuntjaDemo() {
         await db.grantProjectMapping.create({ data: { grantId: grant.id, projectId: projMapping.project.id, allocatedAmount: projMapping.amount } });
       }
 
-      await seedPreAwardHistory(grant.id, data.title);
+      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
     }
 
     // 9. CATEGORY B: 15 LIVE GRANTS
@@ -281,7 +273,7 @@ export async function seedChronologicalUrapuntjaDemo() {
         await db.grantProjectMapping.create({ data: { grantId: grant.id, projectId: projMapping.project.id, allocatedAmount: projMapping.amount } });
       }
 
-      await seedPreAwardHistory(grant.id, data.title);
+      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
 
       const contract = await db.contract.create({
         data: {
@@ -296,14 +288,10 @@ export async function seedChronologicalUrapuntjaDemo() {
       const m2 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 2: Mid-Term Clinical Progress Report & Financial Acquittal', dueDate: new Date('2025-09-30') } });
       const m3 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 3: Final Closeout Evaluation & Comprehensive Audit', dueDate: new Date(data.close) } });
 
-      await db.milestoneTask.createMany({
-        data: [
-          { milestoneId: m1.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Milestones] Verify Advance Tranche Deposit & Open Ledger', description: 'Confirm receipt of 40% advance funding tranche.', assignedToUserId: uAdrian.id, dueDate: new Date(data.open), status: 'COMPLETED', stage: 'OBLIGATION', completedAt: new Date(data.open) },
-          { milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Acquittals] Prepare Mid-Term Obligation Acquittal & Financial Report', description: 'Compile expenditure receipts and patient encounter counts.', assignedToUserId: uAdrian.id, dueDate: new Date('2025-09-15'), status: 'IN_PROGRESS', stage: 'OBLIGATION' },
-          { milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Reporting] Submit 6-Month Clinical Progress Report to Funder Portal', description: 'Review outstation outreach logs with Dr. Boyle.', assignedToUserId: uBoyle.id, dueDate: new Date('2025-09-20'), status: 'PENDING', stage: 'OBLIGATION' },
-          { milestoneId: m3.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Activities] Final Closeout Ledger Reconciliation & Audit Sign-Off', description: 'Prepare closeout notes.', assignedToUserId: uNicole.id, dueDate: new Date(data.close), status: 'PENDING', stage: 'OBLIGATION' }
-        ]
-      });
+      await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m1.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Milestones] Verify Advance Tranche Deposit & Open Ledger', description: 'Confirm receipt of 40% advance funding tranche.', assignedToUserId: uAdrian.id, dueDate: new Date(data.open), status: 'COMPLETED', stage: 'OBLIGATION', completedAt: new Date(data.open) } });
+      await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Acquittals] Prepare Mid-Term Obligation Acquittal & Financial Report', description: 'Compile expenditure receipts and patient encounter counts.', assignedToUserId: uAdrian.id, dueDate: new Date('2025-09-15'), status: 'IN_PROGRESS', stage: 'OBLIGATION' } });
+      await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Reporting] Submit 6-Month Clinical Progress Report to Funder Portal', description: 'Review outstation outreach logs with Dr. Boyle.', assignedToUserId: uBoyle.id, dueDate: new Date('2025-09-20'), status: 'PENDING', stage: 'OBLIGATION' } });
+      await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m3.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Activities] Final Closeout Ledger Reconciliation & Audit Sign-Off', description: 'Prepare closeout notes.', assignedToUserId: uNicole.id, dueDate: new Date(data.close), status: 'PENDING', stage: 'OBLIGATION' } });
 
       const recName = createReceiptPdf(`RECEIPT_LIVE_${i + 1}.pdf`, data.value * 0.3, 'NT Remote Medical Logistics');
       await db.transaction.create({ data: { organizationId: ORG_ID, grantId: grant.id, projectId: data.projects[0].project.id, amount: data.value * 0.4, type: 'INCOME', description: `Initial Grant Drawdown - ${data.title}`, category: 'Funder Drawdown', date: new Date(data.open) } });
@@ -341,7 +329,7 @@ export async function seedChronologicalUrapuntjaDemo() {
         }
       });
 
-      await seedPreAwardHistory(grant.id, data.title);
+      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
     }
 
     // 11. CATEGORY D: 6 PENDING GRANTS
@@ -376,7 +364,7 @@ export async function seedChronologicalUrapuntjaDemo() {
         }
       });
 
-      await seedPreAwardHistory(grant.id, data.title);
+      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
     }
   }
 
