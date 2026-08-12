@@ -191,9 +191,14 @@ export function ensurePdfAssetsOnDisk() {
     }
   ];
 
+  const targetDir = path.join(__dirname, '../knowledge_centre_assets');
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+
   kbDocs.forEach(doc => {
     const pdfBuf = generatePdfBuffer(doc.title, doc.subtitle, doc.sections);
-    fs.writeFileSync(path.join(__dirname, '../knowledge_centre_assets', doc.filename), pdfBuf);
+    fs.writeFileSync(path.join(targetDir, doc.filename), pdfBuf);
   });
 
   console.log(`Generated ${kbDocs.length} Knowledge Base PDF assets on disk.`);

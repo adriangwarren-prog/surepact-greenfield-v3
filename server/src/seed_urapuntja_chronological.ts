@@ -132,7 +132,9 @@ export async function seedChronologicalUrapuntjaDemoForOrg(ORG_ID = 'demo-org-1'
     const pdfBuf = generatePdfBuffer(`Receipt: ${receiptName}`, `Vendor: ${vendor} | Amount: $${amount.toLocaleString()}`, [
       { heading: 'Payment Confirmation', content: `Amount Paid: $${amount.toLocaleString()}\nStatus: SETTLED & VERIFIED\nAudit Code: REC-${Math.floor(Math.random()*899999+100000)}` }
     ]);
-    const receiptPath = path.join(__dirname, '../receipt_assets', receiptName);
+    const dir = path.join(__dirname, '../receipt_assets');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const receiptPath = path.join(dir, receiptName);
     fs.writeFileSync(receiptPath, pdfBuf);
     return receiptName;
   };
@@ -142,7 +144,9 @@ export async function seedChronologicalUrapuntjaDemoForOrg(ORG_ID = 'demo-org-1'
       { heading: 'Schedule 1: Execution Details', content: `Agreement Reference: GFA-${Math.floor(Math.random()*8999+1000)}\nGrant Program: ${grantTitle}` },
       { heading: 'Schedule 2: Performance Milestones', content: 'Clause 4.1 Setup Report\nClause 7.2 Progress Report\nClause 12.4 Final Acquittal' }
     ]);
-    const gfaPath = path.join(__dirname, '../gfa_documents', gfaName);
+    const dir = path.join(__dirname, '../gfa_documents');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const gfaPath = path.join(dir, gfaName);
     fs.writeFileSync(gfaPath, pdfBuf);
     return gfaName;
   };
