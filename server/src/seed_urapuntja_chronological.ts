@@ -57,7 +57,7 @@ export async function seedChronologicalUrapuntjaDemo() {
   console.log('👥 Seeding Staff & Grants Managers...');
   const defaultPassHash = await bcrypt.hash('SurePact2026!', 10);
 
-    const getOrCreateUser = async (raw: any) => {
+  const getOrCreateUser = async (raw: any) => {
     const data = raw?.data || raw;
     const existing = await db.user.findFirst({ where: { email: data.email } });
     if (existing) {
@@ -218,39 +218,43 @@ export async function seedChronologicalUrapuntjaDemo() {
     ];
 
     for (let i = 0; i < closedGrantsData.length; i++) {
-      const data = closedGrantsData[i];
-      const gfaFile = createGfaPdf(`GFA_CLOSED_${i + 1}.pdf`, data.title, data.funder);
+      try {
+        const data = closedGrantsData[i];
+        const gfaFile = createGfaPdf(`GFA_CLOSED_${i + 1}.pdf`, data.title, data.funder);
 
-      const grant = await db.grant.create({
-        data: {
-          organizationId: ORG_ID,
-          title: data.title,
-          funderName: data.funder,
-          totalFundingValue: data.value,
-          amountRequested: data.value,
-          openDate: new Date(data.open),
-          closeDate: new Date(data.close),
-          dateSubmitted: new Date(data.submitted),
-          gfaDocumentName: gfaFile,
-          gfaExtractedTitle: `EXECUTED GRANT FUNDING AGREEMENT - ${data.title.toUpperCase()}`,
-          submissionReference: `SUB-CLOSED-00${i + 1}`,
-          status: 'CLOSED',
-          category: 'Primary Care',
-          guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
-          guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
-          requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Project Delivery Plan', 'Risk Assessment Matrix']),
-          costItems: JSON.stringify([{ item: 'Clinical Operations', cost: data.value * 0.7 }, { item: 'Equipment & Logistics', cost: data.value * 0.3 }]),
-          closeoutNotes: 'All project deliverables met on schedule. Financial acquittal approved by funder.'
+        const grant = await db.grant.create({
+          data: {
+            organizationId: ORG_ID,
+            title: data.title,
+            funderName: data.funder,
+            totalFundingValue: data.value,
+            amountRequested: data.value,
+            openDate: new Date(data.open),
+            closeDate: new Date(data.close),
+            dateSubmitted: new Date(data.submitted),
+            gfaDocumentName: gfaFile,
+            gfaExtractedTitle: `EXECUTED GRANT FUNDING AGREEMENT - ${data.title.toUpperCase()}`,
+            submissionReference: `SUB-CLOSED-00${i + 1}`,
+            status: 'CLOSED',
+            category: 'Primary Care',
+            guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+            guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
+            requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Project Delivery Plan', 'Risk Assessment Matrix']),
+            costItems: JSON.stringify([{ item: 'Clinical Operations', cost: data.value * 0.7 }, { item: 'Equipment & Logistics', cost: data.value * 0.3 }]),
+            closeoutNotes: 'All project deliverables met on schedule. Financial acquittal approved by funder.'
+          }
+        });
+
+        for (const projMapping of data.projects) {
+          try {
+            await db.grantProjectMapping.create({ data: { grantId: grant.id, projectId: projMapping.project.id, allocatedAmount: projMapping.amount } });
+          } catch (e) {}
         }
-      });
 
-      for (const projMapping of data.projects) {
-        try {
-          await db.grantProjectMapping.create({ data: { grantId: grant.id, projectId: projMapping.project.id, allocatedAmount: projMapping.amount } });
-        } catch (e) {}
+        await seedPreAwardHistory(grant.id, data.title, ORG_ID);
+      } catch (e) {
+        console.error('Closed grant creation warning:', e);
       }
-
-      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
     }
 
     // 9. CATEGORY B: 15 LIVE GRANTS
@@ -273,67 +277,71 @@ export async function seedChronologicalUrapuntjaDemo() {
     ];
 
     for (let i = 0; i < liveGrantsData.length; i++) {
-      const data = liveGrantsData[i];
-      const gfaFile = createGfaPdf(`GFA_LIVE_${i + 1}.pdf`, data.title, data.funder);
-
-      const grant = await db.grant.create({
-        data: {
-          organizationId: ORG_ID,
-          title: data.title,
-          funderName: data.funder,
-          totalFundingValue: data.value,
-          amountRequested: data.value,
-          openDate: new Date(data.open),
-          closeDate: new Date(data.close),
-          dateSubmitted: new Date(data.submitted),
-          gfaDocumentName: gfaFile,
-          gfaExtractedTitle: `EXECUTED GRANT FUNDING AGREEMENT - ${data.title.toUpperCase()}`,
-          submissionReference: `SUB-LIVE-00${i + 1}`,
-          status: 'ACTIVE_AWARDED',
-          category: 'Primary Health Care',
-          guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
-          guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
-          requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Clinical Protocol', 'Risk Management Plan']),
-          costItems: JSON.stringify([{ item: 'Clinical Personnel & Travel', cost: data.value * 0.75 }, { item: 'Medical Supplies & Equipment', cost: data.value * 0.25 }])
-        }
-      });
-
-      for (const projMapping of data.projects) {
-        try {
-          await db.grantProjectMapping.create({ data: { grantId: grant.id, projectId: projMapping.project.id, allocatedAmount: projMapping.amount } });
-        } catch (e) {}
-      }
-
-      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
-
       try {
-        const contract = await db.contract.create({
+        const data = liveGrantsData[i];
+        const gfaFile = createGfaPdf(`GFA_LIVE_${i + 1}.pdf`, data.title, data.funder);
+
+        const grant = await db.grant.create({
           data: {
-            grantId: grant.id,
-            fundingAgreementReference: gfaFile,
-            executionDate: new Date(data.open),
-            totalObligatedAmount: data.value
+            organizationId: ORG_ID,
+            title: data.title,
+            funderName: data.funder,
+            totalFundingValue: data.value,
+            amountRequested: data.value,
+            openDate: new Date(data.open),
+            closeDate: new Date(data.close),
+            dateSubmitted: new Date(data.submitted),
+            gfaDocumentName: gfaFile,
+            gfaExtractedTitle: `EXECUTED GRANT FUNDING AGREEMENT - ${data.title.toUpperCase()}`,
+            submissionReference: `SUB-LIVE-00${i + 1}`,
+            status: 'ACTIVE_AWARDED',
+            category: 'Primary Health Care',
+            guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+            guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
+            requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Clinical Protocol', 'Risk Management Plan']),
+            costItems: JSON.stringify([{ item: 'Clinical Personnel & Travel', cost: data.value * 0.75 }, { item: 'Medical Supplies & Equipment', cost: data.value * 0.25 }])
           }
         });
 
-        const m1 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 1: Execution & Initial Tranche Drawdown', dueDate: new Date(data.open) } });
-        const m2 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 2: Mid-Term Clinical Progress Report & Financial Acquittal', dueDate: new Date('2025-09-30') } });
-        const m3 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 3: Final Closeout Evaluation & Comprehensive Audit', dueDate: new Date(data.close) } });
+        for (const projMapping of data.projects) {
+          try {
+            await db.grantProjectMapping.create({ data: { grantId: grant.id, projectId: projMapping.project.id, allocatedAmount: projMapping.amount } });
+          } catch (e) {}
+        }
 
-        await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m1.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Milestones] Verify Advance Tranche Deposit & Open Ledger', description: 'Confirm receipt of 40% advance funding tranche.', assignedToUserId: adrianId, dueDate: new Date(data.open), status: 'COMPLETED', stage: 'OBLIGATION', completedAt: new Date(data.open) } });
-        await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Acquittals] Prepare Mid-Term Obligation Acquittal & Financial Report', description: 'Compile expenditure receipts and patient encounter counts.', assignedToUserId: adrianId, dueDate: new Date('2025-09-15'), status: 'IN_PROGRESS', stage: 'OBLIGATION' } });
-        await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Reporting] Submit 6-Month Clinical Progress Report to Funder Portal', description: 'Review outstation outreach logs with Dr. Boyle.', assignedToUserId: boyleId, dueDate: new Date('2025-09-20'), status: 'PENDING', stage: 'OBLIGATION' } });
-        await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m3.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Activities] Final Closeout Ledger Reconciliation & Audit Sign-Off', description: 'Prepare closeout notes.', assignedToUserId: nicoleId, dueDate: new Date(data.close), status: 'PENDING', stage: 'OBLIGATION' } });
-      } catch (e) {
-        console.warn('Contract/Milestone warning:', e);
-      }
+        await seedPreAwardHistory(grant.id, data.title, ORG_ID);
 
-      try {
-        const recName = createReceiptPdf(`RECEIPT_LIVE_${i + 1}.pdf`, data.value * 0.3, 'NT Remote Medical Logistics');
-        await db.transaction.create({ data: { organizationId: ORG_ID, grantId: grant.id, projectId: data.projects[0].project.id, amount: data.value * 0.4, type: 'INCOME', description: `Initial Grant Drawdown - ${data.title}`, category: 'Funder Drawdown', date: new Date(data.open) } });
-        await db.transaction.create({ data: { organizationId: ORG_ID, grantId: grant.id, projectId: data.projects[0].project.id, amount: -(data.value * 0.3), type: 'EXPENDITURE', description: `Clinical Equipment & Operations (Receipt: ${recName})`, category: 'Equipment & Materials', date: new Date('2025-02-10') } });
+        try {
+          const contract = await db.contract.create({
+            data: {
+              grantId: grant.id,
+              fundingAgreementReference: gfaFile,
+              executionDate: new Date(data.open),
+              totalObligatedAmount: data.value
+            }
+          });
+
+          const m1 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 1: Execution & Initial Tranche Drawdown', dueDate: new Date(data.open) } });
+          const m2 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 2: Mid-Term Clinical Progress Report & Financial Acquittal', dueDate: new Date('2025-09-30') } });
+          const m3 = await db.milestone.create({ data: { contractId: contract.id, title: 'Milestone 3: Final Closeout Evaluation & Comprehensive Audit', dueDate: new Date(data.close) } });
+
+          await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m1.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Milestones] Verify Advance Tranche Deposit & Open Ledger', description: 'Confirm receipt of 40% advance funding tranche.', assignedToUserId: adrianId, dueDate: new Date(data.open), status: 'COMPLETED', stage: 'OBLIGATION', completedAt: new Date(data.open) } });
+          await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Acquittals] Prepare Mid-Term Obligation Acquittal & Financial Report', description: 'Compile expenditure receipts and patient encounter counts.', assignedToUserId: adrianId, dueDate: new Date('2025-09-15'), status: 'IN_PROGRESS', stage: 'OBLIGATION' } });
+          await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m2.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Reporting] Submit 6-Month Clinical Progress Report to Funder Portal', description: 'Review outstation outreach logs with Dr. Boyle.', assignedToUserId: boyleId, dueDate: new Date('2025-09-20'), status: 'PENDING', stage: 'OBLIGATION' } });
+          await db.milestoneTask.create({ data: { organizationId: ORG_ID, milestoneId: m3.id, grantId: grant.id, projectId: data.projects[0].project.id, title: '[Category: Activities] Final Closeout Ledger Reconciliation & Audit Sign-Off', description: 'Prepare closeout notes.', assignedToUserId: nicoleId, dueDate: new Date(data.close), status: 'PENDING', stage: 'OBLIGATION' } });
+        } catch (e) {
+          console.warn('Contract/Milestone warning:', e);
+        }
+
+        try {
+          const recName = createReceiptPdf(`RECEIPT_LIVE_${i + 1}.pdf`, data.value * 0.3, 'NT Remote Medical Logistics');
+          await db.transaction.create({ data: { organizationId: ORG_ID, grantId: grant.id, projectId: data.projects[0].project.id, amount: data.value * 0.4, type: 'INCOME', description: `Initial Grant Drawdown - ${data.title}`, category: 'Funder Drawdown', date: new Date(data.open) } });
+          await db.transaction.create({ data: { organizationId: ORG_ID, grantId: grant.id, projectId: data.projects[0].project.id, amount: -(data.value * 0.3), type: 'EXPENDITURE', description: `Clinical Equipment & Operations (Receipt: ${recName})`, category: 'Equipment & Materials', date: new Date('2025-02-10') } });
+        } catch (e) {
+          console.warn('Transaction warning:', e);
+        }
       } catch (e) {
-        console.warn('Transaction warning:', e);
+        console.error('Live grant creation warning:', e);
       }
     }
 
@@ -346,29 +354,33 @@ export async function seedChronologicalUrapuntjaDemo() {
     ];
 
     for (let i = 0; i < rejectedGrantsData.length; i++) {
-      const data = rejectedGrantsData[i];
-      const grant = await db.grant.create({
-        data: {
-          organizationId: ORG_ID,
-          title: data.title,
-          funderName: data.funder,
-          totalFundingValue: data.value,
-          amountRequested: data.value,
-          openDate: new Date(data.open),
-          closeDate: new Date(data.close),
-          dateSubmitted: new Date(data.submitted),
-          submissionReference: `SUB-REJ-00${i + 1}`,
-          status: 'REJECTED',
-          category: 'Research',
-          guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
-          guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
-          requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Research Protocol', 'Ethics Approval']),
-          costItems: JSON.stringify([{ item: 'Research Personnel', cost: data.value * 0.7 }, { item: 'Travel & Operations', cost: data.value * 0.3 }]),
-          closeoutNotes: `Application submitted on ${data.submitted}. Funder notified outcome as unsuccessful.`
-        }
-      });
+      try {
+        const data = rejectedGrantsData[i];
+        const grant = await db.grant.create({
+          data: {
+            organizationId: ORG_ID,
+            title: data.title,
+            funderName: data.funder,
+            totalFundingValue: data.value,
+            amountRequested: data.value,
+            openDate: new Date(data.open),
+            closeDate: new Date(data.close),
+            dateSubmitted: new Date(data.submitted),
+            submissionReference: `SUB-REJ-00${i + 1}`,
+            status: 'REJECTED',
+            category: 'Research',
+            guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+            guidelinesExtractedTitle: `PROGRAM GUIDELINES - ${data.title.toUpperCase()}`,
+            requiredDocuments: JSON.stringify(['Audited Financial Statements', 'Research Protocol', 'Ethics Approval']),
+            costItems: JSON.stringify([{ item: 'Research Personnel', cost: data.value * 0.7 }, { item: 'Travel & Operations', cost: data.value * 0.3 }]),
+            closeoutNotes: `Application submitted on ${data.submitted}. Funder notified outcome as unsuccessful.`
+          }
+        });
 
-      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
+        await seedPreAwardHistory(grant.id, data.title, ORG_ID);
+      } catch (e) {
+        console.error('Rejected grant creation warning:', e);
+      }
     }
 
     // 11. CATEGORY D: 6 PENDING GRANTS
@@ -382,28 +394,32 @@ export async function seedChronologicalUrapuntjaDemo() {
     ];
 
     for (let i = 0; i < pendingGrantsData.length; i++) {
-      const data = pendingGrantsData[i];
-      const grant = await db.grant.create({
-        data: {
-          organizationId: ORG_ID,
-          title: data.title,
-          funderName: data.funder,
-          totalFundingValue: data.value,
-          amountRequested: data.value,
-          openDate: new Date(data.open),
-          closeDate: new Date(data.close),
-          dateSubmitted: data.submitted ? new Date(data.submitted) : null,
-          submissionReference: data.submitted ? `SUB-PEND-00${i + 1}` : null,
-          status: data.status,
-          category: 'Healthcare',
-          guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
-          guidelinesExtractedTitle: `FUNDER GUIDELINES - ${data.title.toUpperCase()}`,
-          requiredDocuments: JSON.stringify(['Application Proposal', 'Financial Budget', 'Risk Assessment']),
-          costItems: JSON.stringify([{ item: 'Operational Service Delivery', cost: data.value }])
-        }
-      });
+      try {
+        const data = pendingGrantsData[i];
+        const grant = await db.grant.create({
+          data: {
+            organizationId: ORG_ID,
+            title: data.title,
+            funderName: data.funder,
+            totalFundingValue: data.value,
+            amountRequested: data.value,
+            openDate: new Date(data.open),
+            closeDate: new Date(data.close),
+            dateSubmitted: data.submitted ? new Date(data.submitted) : null,
+            submissionReference: data.submitted ? `SUB-PEND-00${i + 1}` : null,
+            status: data.status,
+            category: 'Healthcare',
+            guidelinesDocName: `GUIDELINES_${data.title.substring(0, 15).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+            guidelinesExtractedTitle: `FUNDER GUIDELINES - ${data.title.toUpperCase()}`,
+            requiredDocuments: JSON.stringify(['Application Proposal', 'Financial Budget', 'Risk Assessment']),
+            costItems: JSON.stringify([{ item: 'Operational Service Delivery', cost: data.value }])
+          }
+        });
 
-      await seedPreAwardHistory(grant.id, data.title, ORG_ID);
+        await seedPreAwardHistory(grant.id, data.title, ORG_ID);
+      } catch (e) {
+        console.error('Pending grant creation warning:', e);
+      }
     }
   }
 
